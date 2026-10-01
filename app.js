@@ -1853,7 +1853,7 @@
     const ids = selectedIds();
     [copyBtn,deleteBtn,editBtn].forEach(b => b.disabled = !state.selected);
     pasteBtn.disabled = !state.clipboard;
-    if (!state.selected) { selectionInfo.innerHTML = '<div class="inspector-empty"><span>↖︎</span><b>Выберите компонент</b>Нажмите на блок, чтобы посмотреть его параметры и сигналы.</div>'; return; }
+    if (!state.selected) { selectionInfo.innerHTML = '<div class="inspector-empty"><span>⌖</span><b>Выберите компонент</b>Нажмите на блок, чтобы посмотреть его параметры и сигналы.</div>'; return; }
     if (state.selected.kind === 'component') {
       const c = getComp(state.selected.id); if (!c) return;
       const def = getDef(c);
