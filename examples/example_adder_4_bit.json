@@ -1,0 +1,217 @@
+{
+  "title": "Сумматор 4 бита",
+  "description": "Числовые входы A=3 и B=5. Cin=0. Измените значения в свойствах: Y показывает сумму по модулю 16, индикатор — перенос.",
+  "components": [
+    {
+      "id": "a",
+      "type": "input",
+      "x": 80,
+      "y": 100,
+      "state": {
+        "value": 3
+      },
+      "props": {
+        "bitWidth": 4
+      }
+    },
+    {
+      "id": "b",
+      "type": "input",
+      "x": 80,
+      "y": 340,
+      "state": {
+        "value": 5
+      },
+      "props": {
+        "bitWidth": 4
+      }
+    },
+    {
+      "id": "zero",
+      "type": "const0",
+      "x": 80,
+      "y": 570
+    },
+    {
+      "id": "add",
+      "type": "adder",
+      "x": 400,
+      "y": 100,
+      "props": {
+        "bitWidth": 4
+      }
+    },
+    {
+      "id": "out",
+      "type": "probe",
+      "x": 740,
+      "y": 100,
+      "props": {
+        "bitWidth": 4
+      }
+    },
+    {
+      "id": "carry",
+      "type": "indicator",
+      "x": 740,
+      "y": 350
+    }
+  ],
+  "wires": [
+    {
+      "id": "w0",
+      "from": {
+        "cid": "a",
+        "pid": "out0"
+      },
+      "to": {
+        "cid": "add",
+        "pid": "a0"
+      }
+    },
+    {
+      "id": "w1",
+      "from": {
+        "cid": "a",
+        "pid": "out1"
+      },
+      "to": {
+        "cid": "add",
+        "pid": "a1"
+      }
+    },
+    {
+      "id": "w2",
+      "from": {
+        "cid": "a",
+        "pid": "out2"
+      },
+      "to": {
+        "cid": "add",
+        "pid": "a2"
+      }
+    },
+    {
+      "id": "w3",
+      "from": {
+        "cid": "a",
+        "pid": "out3"
+      },
+      "to": {
+        "cid": "add",
+        "pid": "a3"
+      }
+    },
+    {
+      "id": "w4",
+      "from": {
+        "cid": "b",
+        "pid": "out0"
+      },
+      "to": {
+        "cid": "add",
+        "pid": "b0"
+      }
+    },
+    {
+      "id": "w5",
+      "from": {
+        "cid": "b",
+        "pid": "out1"
+      },
+      "to": {
+        "cid": "add",
+        "pid": "b1"
+      }
+    },
+    {
+      "id": "w6",
+      "from": {
+        "cid": "b",
+        "pid": "out2"
+      },
+      "to": {
+        "cid": "add",
+        "pid": "b2"
+      }
+    },
+    {
+      "id": "w7",
+      "from": {
+        "cid": "b",
+        "pid": "out3"
+      },
+      "to": {
+        "cid": "add",
+        "pid": "b3"
+      }
+    },
+    {
+      "id": "w8",
+      "from": {
+        "cid": "zero",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "add",
+        "pid": "cin"
+      }
+    },
+    {
+      "id": "w9",
+      "from": {
+        "cid": "add",
+        "pid": "y0"
+      },
+      "to": {
+        "cid": "out",
+        "pid": "in0"
+      }
+    },
+    {
+      "id": "w10",
+      "from": {
+        "cid": "add",
+        "pid": "y1"
+      },
+      "to": {
+        "cid": "out",
+        "pid": "in1"
+      }
+    },
+    {
+      "id": "w11",
+      "from": {
+        "cid": "add",
+        "pid": "y2"
+      },
+      "to": {
+        "cid": "out",
+        "pid": "in2"
+      }
+    },
+    {
+      "id": "w12",
+      "from": {
+        "cid": "add",
+        "pid": "y3"
+      },
+      "to": {
+        "cid": "out",
+        "pid": "in3"
+      }
+    },
+    {
+      "id": "w13",
+      "from": {
+        "cid": "add",
+        "pid": "cout"
+      },
+      "to": {
+        "cid": "carry",
+        "pid": "in"
+      }
+    }
+  ],
+  "texts": []
+}

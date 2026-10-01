@@ -1,0 +1,217 @@
+{
+  "version": "mirea-logic-v1.1-example",
+  "components": [
+    {
+      "id": "data",
+      "type": "switch",
+      "x": 70,
+      "y": 180,
+      "state": {
+        "on": true
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "s0",
+      "type": "switch",
+      "x": 230,
+      "y": 370,
+      "state": {
+        "on": true
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "s1",
+      "type": "switch",
+      "x": 315,
+      "y": 370,
+      "state": {
+        "on": true
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "demux1",
+      "type": "demultiplexer",
+      "x": 390,
+      "y": 130,
+      "state": {},
+      "props": {
+        "bitWidth": 1,
+        "addressBits": 2
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "y0",
+      "type": "indicator",
+      "x": 650,
+      "y": 80,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "y1",
+      "type": "indicator",
+      "x": 650,
+      "y": 155,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "y2",
+      "type": "indicator",
+      "x": 650,
+      "y": 230,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "y3",
+      "type": "indicator",
+      "x": 650,
+      "y": 305,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    }
+  ],
+  "wires": [
+    {
+      "id": "w1",
+      "from": {
+        "cid": "data",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "demux1",
+        "pid": "d"
+      },
+      "color": "#e11d48"
+    },
+    {
+      "id": "w2",
+      "from": {
+        "cid": "s0",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "demux1",
+        "pid": "s0"
+      },
+      "color": "#2563eb"
+    },
+    {
+      "id": "w3",
+      "from": {
+        "cid": "s1",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "demux1",
+        "pid": "s1"
+      },
+      "color": "#16a34a"
+    },
+    {
+      "id": "w4",
+      "from": {
+        "cid": "demux1",
+        "pid": "y0"
+      },
+      "to": {
+        "cid": "y0",
+        "pid": "in"
+      },
+      "color": "#f97316"
+    },
+    {
+      "id": "w5",
+      "from": {
+        "cid": "demux1",
+        "pid": "y1"
+      },
+      "to": {
+        "cid": "y1",
+        "pid": "in"
+      },
+      "color": "#7c3aed"
+    },
+    {
+      "id": "w6",
+      "from": {
+        "cid": "demux1",
+        "pid": "y2"
+      },
+      "to": {
+        "cid": "y2",
+        "pid": "in"
+      },
+      "color": "#0891b2"
+    },
+    {
+      "id": "w7",
+      "from": {
+        "cid": "demux1",
+        "pid": "y3"
+      },
+      "to": {
+        "cid": "y3",
+        "pid": "in"
+      },
+      "color": "#ca8a04"
+    }
+  ],
+  "texts": [
+    {
+      "id": "t1",
+      "x": 60,
+      "y": 40,
+      "text": "Демультиплексор 1→4: S0=1, S1=1, сигнал D идёт на Y3",
+      "size": 18,
+      "color": "#0f172a"
+    }
+  ],
+  "nextId": 200,
+  "colorIndex": 7,
+  "sourceColors": {},
+  "theme": "light",
+  "wireGlowMode": "active"
+}

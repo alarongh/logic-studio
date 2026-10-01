@@ -1,0 +1,327 @@
+{
+  "version": "mirea-logic-v1.1-example",
+  "components": [
+    {
+      "id": "in0",
+      "type": "switch",
+      "x": 70,
+      "y": 40,
+      "state": {
+        "on": false
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "in1",
+      "type": "switch",
+      "x": 70,
+      "y": 95,
+      "state": {
+        "on": false
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "in2",
+      "type": "switch",
+      "x": 70,
+      "y": 150,
+      "state": {
+        "on": false
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "in3",
+      "type": "switch",
+      "x": 70,
+      "y": 205,
+      "state": {
+        "on": false
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "in4",
+      "type": "switch",
+      "x": 70,
+      "y": 260,
+      "state": {
+        "on": false
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "in5",
+      "type": "switch",
+      "x": 70,
+      "y": 315,
+      "state": {
+        "on": true
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "in6",
+      "type": "switch",
+      "x": 70,
+      "y": 370,
+      "state": {
+        "on": false
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "in7",
+      "type": "switch",
+      "x": 70,
+      "y": 425,
+      "state": {
+        "on": false
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "enc1",
+      "type": "encoder",
+      "x": 330,
+      "y": 95,
+      "state": {},
+      "props": {
+        "bitWidth": 1,
+        "addressBits": 3
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "a0",
+      "type": "indicator",
+      "x": 610,
+      "y": 150,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "a1",
+      "type": "indicator",
+      "x": 610,
+      "y": 220,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "a2",
+      "type": "indicator",
+      "x": 610,
+      "y": 290,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    }
+  ],
+  "wires": [
+    {
+      "id": "w1",
+      "from": {
+        "cid": "in0",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "enc1",
+        "pid": "i0"
+      },
+      "color": "#e11d48"
+    },
+    {
+      "id": "w2",
+      "from": {
+        "cid": "in1",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "enc1",
+        "pid": "i1"
+      },
+      "color": "#2563eb"
+    },
+    {
+      "id": "w3",
+      "from": {
+        "cid": "in2",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "enc1",
+        "pid": "i2"
+      },
+      "color": "#16a34a"
+    },
+    {
+      "id": "w4",
+      "from": {
+        "cid": "in3",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "enc1",
+        "pid": "i3"
+      },
+      "color": "#f97316"
+    },
+    {
+      "id": "w5",
+      "from": {
+        "cid": "in4",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "enc1",
+        "pid": "i4"
+      },
+      "color": "#7c3aed"
+    },
+    {
+      "id": "w6",
+      "from": {
+        "cid": "in5",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "enc1",
+        "pid": "i5"
+      },
+      "color": "#0891b2"
+    },
+    {
+      "id": "w7",
+      "from": {
+        "cid": "in6",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "enc1",
+        "pid": "i6"
+      },
+      "color": "#ca8a04"
+    },
+    {
+      "id": "w8",
+      "from": {
+        "cid": "in7",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "enc1",
+        "pid": "i7"
+      },
+      "color": "#db2777"
+    },
+    {
+      "id": "w9",
+      "from": {
+        "cid": "enc1",
+        "pid": "a"
+      },
+      "to": {
+        "cid": "a0",
+        "pid": "in"
+      },
+      "color": "#059669"
+    },
+    {
+      "id": "w10",
+      "from": {
+        "cid": "enc1",
+        "pid": "b"
+      },
+      "to": {
+        "cid": "a1",
+        "pid": "in"
+      },
+      "color": "#4f46e5"
+    },
+    {
+      "id": "w11",
+      "from": {
+        "cid": "enc1",
+        "pid": "c"
+      },
+      "to": {
+        "cid": "a2",
+        "pid": "in"
+      },
+      "color": "#dc2626"
+    }
+  ],
+  "texts": [
+    {
+      "id": "t1",
+      "x": 60,
+      "y": 30,
+      "text": "Шифратор 8→3: активен I5, на выходе код 101",
+      "size": 18,
+      "color": "#0f172a"
+    }
+  ],
+  "nextId": 200,
+  "colorIndex": 11,
+  "sourceColors": {},
+  "theme": "light",
+  "wireGlowMode": "active"
+}

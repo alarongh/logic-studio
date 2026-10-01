@@ -1,0 +1,223 @@
+{
+  "version": "mirea-logic-v1.1-example",
+  "components": [
+    {
+      "id": "d0",
+      "type": "switch",
+      "x": 70,
+      "y": 80,
+      "state": {
+        "on": false
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "d1",
+      "type": "switch",
+      "x": 70,
+      "y": 155,
+      "state": {
+        "on": true
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "d2",
+      "type": "switch",
+      "x": 70,
+      "y": 230,
+      "state": {
+        "on": false
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "d3",
+      "type": "switch",
+      "x": 70,
+      "y": 305,
+      "state": {
+        "on": true
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "s0",
+      "type": "switch",
+      "x": 250,
+      "y": 370,
+      "state": {
+        "on": true
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "s1",
+      "type": "switch",
+      "x": 335,
+      "y": 370,
+      "state": {
+        "on": false
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "mux1",
+      "type": "multiplexer",
+      "x": 390,
+      "y": 130,
+      "state": {},
+      "props": {
+        "bitWidth": 1,
+        "addressBits": 2
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "out",
+      "type": "indicator",
+      "x": 650,
+      "y": 170,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    }
+  ],
+  "wires": [
+    {
+      "id": "w1",
+      "from": {
+        "cid": "d0",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "mux1",
+        "pid": "d0"
+      },
+      "color": "#e11d48"
+    },
+    {
+      "id": "w2",
+      "from": {
+        "cid": "d1",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "mux1",
+        "pid": "d1"
+      },
+      "color": "#2563eb"
+    },
+    {
+      "id": "w3",
+      "from": {
+        "cid": "d2",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "mux1",
+        "pid": "d2"
+      },
+      "color": "#16a34a"
+    },
+    {
+      "id": "w4",
+      "from": {
+        "cid": "d3",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "mux1",
+        "pid": "d3"
+      },
+      "color": "#f97316"
+    },
+    {
+      "id": "w5",
+      "from": {
+        "cid": "s0",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "mux1",
+        "pid": "s0"
+      },
+      "color": "#7c3aed"
+    },
+    {
+      "id": "w6",
+      "from": {
+        "cid": "s1",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "mux1",
+        "pid": "s1"
+      },
+      "color": "#0891b2"
+    },
+    {
+      "id": "w7",
+      "from": {
+        "cid": "mux1",
+        "pid": "y"
+      },
+      "to": {
+        "cid": "out",
+        "pid": "in"
+      },
+      "color": "#ca8a04"
+    }
+  ],
+  "texts": [
+    {
+      "id": "t1",
+      "x": 60,
+      "y": 40,
+      "text": "Мультиплексор 4→1: S0=1, S1=0, выбран D1",
+      "size": 18,
+      "color": "#0f172a"
+    }
+  ],
+  "nextId": 200,
+  "colorIndex": 7,
+  "sourceColors": {},
+  "theme": "light",
+  "wireGlowMode": "active"
+}

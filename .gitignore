@@ -1,0 +1,10 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+.local/
+source-original/
+app-index.txt
+*.log
+.env*
+!.env.example

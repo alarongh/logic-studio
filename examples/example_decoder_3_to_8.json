@@ -1,0 +1,317 @@
+{
+  "version": "mirea-logic-v1.1-example",
+  "components": [
+    {
+      "id": "sw0",
+      "type": "switch",
+      "x": 70,
+      "y": 100,
+      "state": {
+        "on": true
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "sw1",
+      "type": "switch",
+      "x": 70,
+      "y": 190,
+      "state": {
+        "on": false
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "sw2",
+      "type": "switch",
+      "x": 70,
+      "y": 280,
+      "state": {
+        "on": true
+      },
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "dec1",
+      "type": "decoder",
+      "x": 310,
+      "y": 110,
+      "state": {},
+      "props": {
+        "bitWidth": 1,
+        "addressBits": 3
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "out0",
+      "type": "indicator",
+      "x": 620,
+      "y": 40,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "out1",
+      "type": "indicator",
+      "x": 620,
+      "y": 95,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "out2",
+      "type": "indicator",
+      "x": 620,
+      "y": 150,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "out3",
+      "type": "indicator",
+      "x": 620,
+      "y": 205,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "out4",
+      "type": "indicator",
+      "x": 620,
+      "y": 260,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "out5",
+      "type": "indicator",
+      "x": 620,
+      "y": 315,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "out6",
+      "type": "indicator",
+      "x": 620,
+      "y": 370,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    },
+    {
+      "id": "out7",
+      "type": "indicator",
+      "x": 620,
+      "y": 425,
+      "state": {},
+      "props": {
+        "bitWidth": 1
+      },
+      "inputs": {},
+      "outputs": {},
+      "prevInputs": {}
+    }
+  ],
+  "wires": [
+    {
+      "id": "w1",
+      "from": {
+        "cid": "sw0",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "dec1",
+        "pid": "a"
+      },
+      "color": "#e11d48"
+    },
+    {
+      "id": "w2",
+      "from": {
+        "cid": "sw1",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "dec1",
+        "pid": "b"
+      },
+      "color": "#2563eb"
+    },
+    {
+      "id": "w3",
+      "from": {
+        "cid": "sw2",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "dec1",
+        "pid": "c"
+      },
+      "color": "#16a34a"
+    },
+    {
+      "id": "w4",
+      "from": {
+        "cid": "dec1",
+        "pid": "y0"
+      },
+      "to": {
+        "cid": "out0",
+        "pid": "in"
+      },
+      "color": "#f97316"
+    },
+    {
+      "id": "w5",
+      "from": {
+        "cid": "dec1",
+        "pid": "y1"
+      },
+      "to": {
+        "cid": "out1",
+        "pid": "in"
+      },
+      "color": "#7c3aed"
+    },
+    {
+      "id": "w6",
+      "from": {
+        "cid": "dec1",
+        "pid": "y2"
+      },
+      "to": {
+        "cid": "out2",
+        "pid": "in"
+      },
+      "color": "#0891b2"
+    },
+    {
+      "id": "w7",
+      "from": {
+        "cid": "dec1",
+        "pid": "y3"
+      },
+      "to": {
+        "cid": "out3",
+        "pid": "in"
+      },
+      "color": "#ca8a04"
+    },
+    {
+      "id": "w8",
+      "from": {
+        "cid": "dec1",
+        "pid": "y4"
+      },
+      "to": {
+        "cid": "out4",
+        "pid": "in"
+      },
+      "color": "#db2777"
+    },
+    {
+      "id": "w9",
+      "from": {
+        "cid": "dec1",
+        "pid": "y5"
+      },
+      "to": {
+        "cid": "out5",
+        "pid": "in"
+      },
+      "color": "#059669"
+    },
+    {
+      "id": "w10",
+      "from": {
+        "cid": "dec1",
+        "pid": "y6"
+      },
+      "to": {
+        "cid": "out6",
+        "pid": "in"
+      },
+      "color": "#4f46e5"
+    },
+    {
+      "id": "w11",
+      "from": {
+        "cid": "dec1",
+        "pid": "y7"
+      },
+      "to": {
+        "cid": "out7",
+        "pid": "in"
+      },
+      "color": "#dc2626"
+    }
+  ],
+  "texts": [
+    {
+      "id": "t1",
+      "x": 60,
+      "y": 45,
+      "text": "Дешифратор 3→8: A0 и A2 включены, активен Y5",
+      "size": 18,
+      "color": "#0f172a"
+    }
+  ],
+  "nextId": 200,
+  "colorIndex": 11,
+  "sourceColors": {},
+  "theme": "light",
+  "wireGlowMode": "active"
+}

@@ -1,0 +1,136 @@
+{
+  "title": "Четырёхбитный счётчик",
+  "description": "EN=1, RST=0. Тактовый генератор увеличивает счётчик по положительному фронту. Выходы Q0–Q3 отображаются числовым дисплеем.",
+  "components": [
+    {
+      "id": "clk",
+      "type": "clock",
+      "x": 80,
+      "y": 120
+    },
+    {
+      "id": "enable",
+      "type": "const1",
+      "x": 80,
+      "y": 300
+    },
+    {
+      "id": "reset",
+      "type": "const0",
+      "x": 80,
+      "y": 480
+    },
+    {
+      "id": "cnt",
+      "type": "counter",
+      "x": 390,
+      "y": 120,
+      "props": {
+        "bitWidth": 4
+      },
+      "state": {
+        "value": 0
+      }
+    },
+    {
+      "id": "out",
+      "type": "display",
+      "x": 700,
+      "y": 120,
+      "props": {
+        "bitWidth": 4
+      }
+    }
+  ],
+  "wires": [
+    {
+      "id": "w0",
+      "from": {
+        "cid": "enable",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "clk",
+        "pid": "en"
+      }
+    },
+    {
+      "id": "w1",
+      "from": {
+        "cid": "clk",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "cnt",
+        "pid": "clk"
+      }
+    },
+    {
+      "id": "w2",
+      "from": {
+        "cid": "enable",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "cnt",
+        "pid": "en"
+      }
+    },
+    {
+      "id": "w3",
+      "from": {
+        "cid": "reset",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "cnt",
+        "pid": "reset"
+      }
+    },
+    {
+      "id": "w4",
+      "from": {
+        "cid": "cnt",
+        "pid": "q0"
+      },
+      "to": {
+        "cid": "out",
+        "pid": "d0"
+      }
+    },
+    {
+      "id": "w5",
+      "from": {
+        "cid": "cnt",
+        "pid": "q1"
+      },
+      "to": {
+        "cid": "out",
+        "pid": "d1"
+      }
+    },
+    {
+      "id": "w6",
+      "from": {
+        "cid": "cnt",
+        "pid": "q2"
+      },
+      "to": {
+        "cid": "out",
+        "pid": "d2"
+      }
+    },
+    {
+      "id": "w7",
+      "from": {
+        "cid": "cnt",
+        "pid": "q3"
+      },
+      "to": {
+        "cid": "out",
+        "pid": "d3"
+      }
+    }
+  ],
+  "texts": []
+}
