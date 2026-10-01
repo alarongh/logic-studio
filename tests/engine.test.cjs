@@ -28,11 +28,10 @@ test('sequential subcircuit instances have independent memory and round-trip',()
 });
 
 
-test('scissors preserve electrical isolation and reconnect in all four directions',()=>{
+test('scissors delete the entire wire in all directions and undo restores it',()=>{
   for(const [start,end] of [[[100,100],[600,100]],[[600,100],[100,100]],[[100,100],[600,700]],[[100,700],[600,100]]]){
     const e=engine(),a=e.make('switch',...start,{on:true}),b=e.make('indicator',...end);wire(e,a,'out',b,'in');e.simulate();assert.equal(b.inputs.in,'1');
-    const original=e.snapshot(),w=e.state.wires[0],points=e.wirePoints(w);const segments=points.slice(1).map((p,i)=>({a:points[i],b:p,len:Math.hypot(p.x-points[i].x,p.y-points[i].y)})).sort((a,b)=>b.len-a.len);const segment=segments[0];
-    e.cutWire(w,{x:(segment.a.x+segment.b.x)/2,y:(segment.a.y+segment.b.y)/2});const contacts=e.state.components.filter(c=>c.type==='contact');assert.equal(contacts.length,2);assert.equal(b.inputs.in,'Z');assert.equal(e.state.wires.length,2);
-    wire(e,contacts[0],'out',contacts[1],'in');e.simulate();assert.equal(b.inputs.in,'1');require('../schema.js').normalize(JSON.parse(e.snapshot()));e.restoreSnapshot(original);assert.equal(e.state.components.length,2);assert.equal(e.state.wires.length,1);assert.equal(e.state.components.find(c=>c.id===b.id).inputs.in,'1');
+    const original=e.snapshot(),w=e.state.wires[0];e.cutWire(w);assert.equal(e.state.components.length,2);assert.equal(b.inputs.in,undefined);assert.equal(e.state.wires.length,0);
+    e.restoreSnapshot(original);assert.equal(e.state.wires.length,1);assert.equal(e.state.components.find(c=>c.id===b.id).inputs.in,'1');
   }
 });

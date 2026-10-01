@@ -1,17 +1,18 @@
 (function(root){
   'use strict';
+  const ports=typeof module!=='undefined'&&module.exports?require('./ports.js'):root.CircuitPorts;
   const names={contact:'Контакт провода',nand:'И-НЕ',nor:'ИЛИ-НЕ',xnor:'Эквивалентность',input:'Числовой вход',probe:'Пробник шины',tristate:'Трёхстабильный буфер',splitter:'Разветвитель',adder:'Сумматор шины',subtractor:'Вычитатель',multiplier:'Умножитель',divider:'Делитель',comparator:'Компаратор',shifter:'Сдвигатель',tff:'T-триггер',sync_register:'Тактовый регистр',counter:'Счётчик',shift_register:'Сдвиговый регистр',ram:'Оперативная память',rom:'Постоянная память'};
   const sequential=new Set(['tff','sync_register','counter','shift_register','ram']);
   const arithmetic=new Set(['adder','subtractor','multiplier','divider','comparator','shifter']);
   const pin=(id,label,side='left',y=.5)=>({id,label,side,y});
   const layout=(pins,side)=>pins.map((p,i)=>pin(p[0],p[1],side,(i+1)/(pins.length+1)));
   const bus=(prefix,n,label=prefix.toUpperCase())=>Array.from({length:n},(_,i)=>[prefix+i,label+i]);
-  function defaults(type){return {bitWidth:['input','probe','splitter','adder','subtractor','multiplier','divider','comparator','shifter','sync_register','counter','shift_register','ram','rom'].includes(type)?4:1,...(['ram','rom'].includes(type)?{addressBits:4}:{}),...(type==='shifter'?{direction:'left'}:{})};}
+  function defaults(type){return {bitWidth:['input','probe','splitter','adder','subtractor','multiplier','divider','comparator','shifter','sync_register','counter','shift_register','ram','rom'].includes(type)?4:1,...(['ram','rom'].includes(type)?{addressBits:4}:{}),...(['nand','nor','xnor'].includes(type)?{inputCount:2,outputCount:1}:{}),...(type==='shifter'?{direction:'left'}:{})};}
   function pins(c){
     const t=c.type,n=c.props.bitWidth||1,a=c.props.addressBits||4;
     if(!names[t])return null;
     let ins=[],outs=[];
-    if(['nand','nor','xnor'].includes(t)){ins=n===1?[['a','A'],['b','B']]:[...bus('a',n),...bus('b',n)];outs=n===1?[['y','Y']]:bus('y',n);}
+    if(ports.isGate(t))return ports.pins(c);
     if(t==='input')outs=bus('out',n,'D');
     if(t==='probe')ins=bus('in',n,'D');
     if(t==='contact'){ins=[['in','']];outs=[['out','']];}
@@ -39,6 +40,7 @@
   const unknown=v=>v==='X'||v==='Z';
   const inv=v=>v==='0'?'1':v==='1'?'0':'X';
   function compute(c,{hold=false}={}){
+    if(ports.compute(c))return true;
     if(!names[c.type])return false;
     const t=c.type,n=c.props.bitWidth||1,mask=2**n-1,st=c.state||(c.state={});
     const inp=id=>sig(c.inputs?.[id]);
@@ -46,12 +48,6 @@
     const out=(id,v)=>{c.outputs[id]=sig(v);};
     const write=(prefix,value,count=n)=>{for(let i=0;i<count;i++)out(prefix+i,value===null?'X':Math.floor(value/2**i)%2);};
     const edge=inp('clk')==='1'&&!st.lastClkHigh;
-    if(['nand','nor','xnor'].includes(t)){
-      for(let i=0;i<n;i++){
-        const a=inp(n===1?'a':'a'+i),b=inp(n===1?'b':'b'+i);
-        const v=t==='nand'?(a==='0'||b==='0'?'1':unknown(a)||unknown(b)?'X':'0'):t==='nor'?(a==='1'||b==='1'?'0':unknown(a)||unknown(b)?'X':'1'):(unknown(a)||unknown(b)?'X':a===b?'1':'0');out(n===1?'y':'y'+i,v);
-      }return true;
-    }
     if(t==='input'){write('out',Number.isInteger(st.value)?st.value&mask:0);return true;}
     if(t==='probe')return true;
     if(t==='contact'){out('out',inp('in'));return true;}
@@ -96,6 +92,6 @@
     }
     return true;
   }
-  const api={names,defaults,pins,definitions,compute,sequential};
+  const api={names,defaults,pins,definitions,compute,sequential,ports};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.CircuitExtended=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

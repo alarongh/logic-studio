@@ -1,8 +1,8 @@
 (function(root){
   'use strict';
   const schema=typeof module!=='undefined'&&module.exports?require('./schema.js'):root.CircuitSchema;
-  const aliases={width:'bitWidth',address:'addressBits'};
-  const propertyKeys=new Set(['bitWidth','addressBits','orientation']);
+  const aliases={width:'bitWidth',address:'addressBits',inputs:'inputCount',outputs:'outputCount'};
+  const propertyKeys=new Set(['bitWidth','addressBits','orientation','inputCount','outputCount']);
   const stateKeys=new Set(['on','value','label','mode','direction','memory','q','qBits','lastClkHigh','childStates']);
   class CodeError extends Error{constructor(message,line=1){super(`Строка ${line}: ${message}`);this.line=line;}}
   function statements(text){
@@ -53,7 +53,7 @@
       for(const w of project.wires){incoming.get(w.to.cid).add(w.from.cid);outgoing.get(w.from.cid).add(w.to.cid);}
       const remaining=new Map([...incoming].map(([id,parents])=>[id,parents.size])),queue=project.components.filter(c=>!remaining.get(c.id)).map(c=>c.id);
       for(let i=0;i<queue.length;i++)for(const child of outgoing.get(queue[i])){level.set(child,Math.max(level.get(child),level.get(queue[i])+1));remaining.set(child,remaining.get(child)-1);if(!remaining.get(child))queue.push(child);}
-      const positions=new Map();for(const c of project.components){if(!automatic.has(c.id))continue;const col=level.get(c.id),row=positions.get(col)||0;const width=c.props.bitWidth||1,spacing=Math.max(190,120+width*32);c.x=80+col*270;c.y=80+row;if(c.x>3100||c.y+spacing>2200)throw new CodeError('Схема слишком велика для автоматического размещения: задайте координаты через at(x,y).',nodeLines.get(c.id));positions.set(col,row+spacing);}
+      const positions=new Map();for(const c of project.components){if(!automatic.has(c.id))continue;const col=level.get(c.id),row=positions.get(col)||0;const width=c.props.bitWidth||1,spacing=Math.max(190,120+width*Math.max(c.props.inputCount||2,c.props.outputCount||1)*16);c.x=80+col*270;c.y=80+row;if(c.x>3100||c.y+spacing>2200)throw new CodeError('Схема слишком велика для автоматического размещения: задайте координаты через at(x,y).',nodeLines.get(c.id));positions.set(col,row+spacing);}
     }
     try{return schema.normalize(project);}catch(e){throw new CodeError(e.message,1);}
   }

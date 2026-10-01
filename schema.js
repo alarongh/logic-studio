@@ -38,6 +38,9 @@
       const props = {};
       if (c.props?.bitWidth !== undefined) props.bitWidth = range(c.props.bitWidth,16,'Разрядность');
       if (c.props?.addressBits !== undefined) props.addressBits = range(c.props.addressBits,5,'Адресная разрядность');
+      if(c.props?.inputCount!==undefined){if(!['and','or','xor','nand','nor','xnor'].includes(c.type))fail('Число входов настраивается у логических вентилей.');props.inputCount=range(c.props.inputCount,16,'Число входов');if(props.inputCount<2)fail('У вентиля должно быть хотя бы 2 входа.');}
+      if(c.props?.outputCount!==undefined){if(!['and','or','xor','nand','nor','xnor'].includes(c.type))fail('Число выходов настраивается у логических вентилей.');props.outputCount=range(c.props.outputCount,8,'Число выходов');}
+      if(['and','or','xor','nand','nor','xnor'].includes(c.type)&&((props.inputCount||2)*(props.bitWidth||1)>96||(props.outputCount||1)*(props.bitWidth||1)>96))fail('У вентиля допустимо до 96 разрядов на каждой стороне.');
       if (c.props?.orientation !== undefined) { if (!['east','south','west','north'].includes(c.props.orientation)) fail('Некорректная ориентация элемента.'); props.orientation=c.props.orientation; }
       const state = normalizeState(c.state);
       return { id:id(c.id), type:c.type, x:coordinate(c.x,3400), y:coordinate(c.y,2300), props, state, inputs:{}, outputs:{}, prevInputs:{} };

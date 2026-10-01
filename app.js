@@ -142,6 +142,7 @@
     const props = { bitWidth: ['register','display','seven_segment'].includes(type) ? 4 : 1 };
     if (type === 'decoder' || type === 'encoder') props.addressBits = 3;
     if (type === 'multiplexer' || type === 'demultiplexer') props.addressBits = 2;
+    if(CircuitExtended.ports.isGate(type)){props.inputCount=2;props.outputCount=1;}
     return props;
   }
 
@@ -156,6 +157,7 @@
     if ('addressBits' in defaultPropsFor(comp.type)) {
       comp.props.addressBits = clampInt(comp.props.addressBits ?? comp.state.addressBits, LIMITS.minAddressBits, LIMITS.maxAddressBits, defaultPropsFor(comp.type).addressBits);
     }
+    if(CircuitExtended.ports.isGate(comp.type)){comp.props.inputCount=clampInt(comp.props.inputCount,2,16,2);comp.props.outputCount=clampInt(comp.props.outputCount,1,8,1);}
     return comp;
   }
 
@@ -184,14 +186,7 @@
     const t = comp.type;
     const bw = bitWidth(comp);
     if(CircuitExtended.names[t])return CircuitExtended.pins(comp);
-    const binaryInputs = ['and','or','xor'];
-    if (binaryInputs.includes(t)) {
-      if (bw === 1) return null;
-      return {
-        inputs: spreadPins(bw * 2, i => i % 2 === 0 ? `a${Math.floor(i/2)}` : `b${Math.floor(i/2)}`, i => i % 2 === 0 ? `A${Math.floor(i/2)}` : `B${Math.floor(i/2)}`, 'left'),
-        outputs: spreadPins(bw, i => `y${i}`, i => `Y${i}`, 'right')
-      };
-    }
+    if(CircuitExtended.ports.isGate(t)){if(bw===1&&comp.props.inputCount===2&&comp.props.outputCount===1&&['and','or','xor'].includes(t))return null;return CircuitExtended.ports.pins(comp);}
     if (t === 'not' || t === 'buffer') {
       if (bw === 1) return null;
       return { inputs: spreadPins(bw, i => `a${i}`, i => `A${i}`, 'left'), outputs: spreadPins(bw, i => `y${i}`, i => `Y${i}`, 'right') };
@@ -291,6 +286,7 @@
     const pins = dynamicPinsFor(comp);
     const def = pins ? { ...base, inputs: pins.inputs, outputs: pins.outputs } : { ...base };
     def.name = dynamicNameFor(comp, base);
+    if(CircuitExtended.ports.isGate(comp.type))def.desc=CircuitExtended.ports.description(comp);
     const pinCount = Math.max((def.inputs || []).filter(p => p.side === 'left').length, (def.outputs || []).filter(p => p.side === 'right').length);
     const bottomCount = (def.inputs || []).filter(p => p.side === 'bottom').length + (def.outputs || []).filter(p => p.side === 'bottom').length;
     def.h = comp.type==='contact'?20:Math.max(base.h || 70, 52 + pinCount * 16, bottomCount ? 100 : 0);
@@ -1032,11 +1028,11 @@
     }
     if (t === 'const0') { setBus('out', 'out', Array(bw).fill(SIG.ZERO)); return; }
     if (t === 'const1' || t === 'power') { setBus('out', 'out', Array(bw).fill(SIG.ONE)); return; }
-    if (t === 'and') { for (let i = 0; i < bw; i++) setOut(c, pid('y','y',i), sigAnd(input(pid('a','a',i)), input(pid('b','b',i)))); return; }
-    if (t === 'or') { for (let i = 0; i < bw; i++) setOut(c, pid('y','y',i), sigOr(input(pid('a','a',i)), input(pid('b','b',i)))); return; }
+
+
     if (t === 'not') { for (let i = 0; i < bw; i++) setOut(c, pid('y','y',i), sigNot(input(pid('a','a',i)))); return; }
     if (t === 'buffer') { for (let i = 0; i < bw; i++) setOut(c, pid('y','y',i), input(pid('a','a',i))); return; }
-    if (t === 'xor') { for (let i = 0; i < bw; i++) setOut(c, pid('y','y',i), sigXor(input(pid('a','a',i)), input(pid('b','b',i)))); return; }
+
     if (t === 'eq') return setOut(c, 'y', sigEq(input('a'), input('b')));
     if (t === 'half_adder' || t === 'full_adder') {
       let carry = t === 'full_adder' ? input('cin') : SIG.ZERO;
@@ -1804,24 +1800,16 @@
       if (!c) return;
       normalizeComponentProps(c);
 
-      const isBitWidth = kind === 'bitWidth';
-      const min = isBitWidth ? LIMITS.minBitWidth : LIMITS.minAddressBits;
-      const max = isBitWidth ? LIMITS.maxBitWidth : LIMITS.maxAddressBits;
-      const currentValue = isBitWidth
-        ? (c.props.bitWidth || 1)
-        : (c.props.addressBits || defaultPropsFor(c.type).addressBits || 1);
-      const label = isBitWidth ? 'Разрядность' : 'Адресная разрядность';
-      const parsed = parsePositiveRange(rawValue, min, max, currentValue, label);
-
-      if (!parsed.ok) {
-        showWarning(input, parsed.message, currentValue);
-        return;
-      }
-
+      const ranges={bitWidth:[1,16,'Разрядность'],addressBits:[1,5,'Адресная разрядность'],inputCount:[2,16,'Число входов'],outputCount:[1,8,'Число выходов']};
+      const [min,max,label]=ranges[kind],currentValue=c.props[kind]||defaultPropsFor(c.type)[kind]||1;
+      const parsed=parsePositiveRange(rawValue,min,max,currentValue,label);
+      if(!parsed.ok){showWarning(input,parsed.message,currentValue);return;}
+      const nextProps={...c.props,[kind]:parsed.value};
+      try{
+        if(CircuitExtended.ports.isGate(c.type))CircuitExtended.ports.check(nextProps);
+        if(['multiplexer','demultiplexer'].includes(c.type)&&2**nextProps.addressBits*nextProps.bitWidth>96)throw new Error('Максимум 96 разрядов данных. Уменьшите число каналов или разрядность.');
+      }catch(error){showWarning(input,error.message,currentValue);return;}
       clearWarning(input);
-      const nextProps = { ...(c.props || {}) };
-      if (kind === 'bitWidth') nextProps.bitWidth = parsed.value;
-      if (kind === 'addressBits') nextProps.addressBits = parsed.value;
       const oldProps = JSON.stringify(c.props || {});
       const newProps = JSON.stringify(nextProps);
       if (oldProps === newProps) { updateInspector(); return; }
@@ -1831,7 +1819,7 @@
       const removed = cleanInvalidWires(c.id);
       state.wireStart = null;
       simulate(0);
-      setStatus(removed ? `Разрядность изменена. Удалено несовместимых проводов: ${removed}.` : 'Разрядность изменена.');
+      setStatus(removed ? `Порты изменены. Удалено несовместимых проводов: ${removed}. Ctrl Z — отменить.` : 'Порты изменены.');
       updateInspector();
       draw();
     };
@@ -1840,6 +1828,8 @@
       bitInput.addEventListener('input', () => { bitInput.setCustomValidity(''); });
       bitInput.addEventListener('change', () => apply('bitWidth', bitInput.value, bitInput));
     }
+    for(const [id,kind]of [['propInputCount','inputCount'],['propOutputCount','outputCount']]){const control=document.getElementById(id);if(control)control.addEventListener('change',()=>apply(kind,control.value,control));}
+    const channel=document.getElementById('propChannelCount');if(channel)channel.addEventListener('change',()=>{apply('addressBits',Math.log2(Number(channel.value)),null);channel.value=String(2**comp.props.addressBits);});
     if (addressInput) {
       addressInput.addEventListener('input', () => { addressInput.setCustomValidity(''); });
       addressInput.addEventListener('change', () => apply('addressBits', addressInput.value, addressInput));
@@ -1862,14 +1852,17 @@
       const outs = Object.entries(c.outputs).map(([k,v]) => `${k}=${signalText(v)}`).join(', ') || 'нет';
       const props = normalizeComponentProps(c).props;
       const pinInfo = `${(def.inputs || []).length} IN · ${(def.outputs || []).length} OUT`;
-      const bitControl = ['decoder','encoder'].includes(c.type)||def.custom ? '' : `<label class="prop-row"><span>${['multiplexer','demultiplexer'].includes(c.type) ? 'Разрядность данных' : 'Разрядность'}</span><input id="propBitWidth" type="number" min="${LIMITS.minBitWidth}" max="${LIMITS.maxBitWidth}" value="${props.bitWidth}"></label>`;
-      const addressLabel = c.type === 'decoder' ? 'Разрядность входного кода' : c.type === 'encoder' ? 'Разрядность выходного кода' : 'Адресная разрядность';
-      const addressControl = ['decoder','encoder','multiplexer','demultiplexer','ram','rom'].includes(c.type)
-        ? `<label class="prop-row"><span>${addressLabel}</span><input id="propAddressBits" type="number" min="${LIMITS.minAddressBits}" max="${LIMITS.maxAddressBits}" value="${props.addressBits}"></label>`
-        : '';
+      const gate=CircuitExtended.ports.isGate(c.type),channels=['decoder','encoder','multiplexer','demultiplexer'].includes(c.type);
+      const bitLabel=['const0','const1','switch','clock','input'].includes(c.type)?'Выходных разрядов':['indicator','probe','display','seven_segment'].includes(c.type)?'Входных разрядов':'Разрядность данных';
+      const bitControl = ['decoder','encoder','contact'].includes(c.type)||def.custom ? '' : `<label class="prop-row"><span>${bitLabel}</span><input id="propBitWidth" type="number" min="${LIMITS.minBitWidth}" max="${LIMITS.maxBitWidth}" value="${props.bitWidth}"></label>`;
+      const countControls=gate?`<div class="port-count-grid"><label>${props.bitWidth>1?'Входных шин':'Входов'}<input id="propInputCount" type="number" min="2" max="16" value="${props.inputCount}"></label><label>${props.bitWidth>1?'Выходных шин':'Выходов'}<input id="propOutputCount" type="number" min="1" max="8" value="${props.outputCount}"></label></div><p class="port-hint">Все входы участвуют в операции. Выходы — копии одного результата.</p>`:'';
+      const channelLabel=['multiplexer','encoder'].includes(c.type)?'Входных каналов':'Выходных каналов';
+      const channelControl=channels?`<label class="prop-row"><span>${channelLabel}</span><select id="propChannelCount">${[2,4,8,16,32].map(n=>`<option value="${n}" ${n===2**props.addressBits?'selected':''}>${n}</option>`).join('')}</select></label>`:'';
+      const addressControl = ['ram','rom'].includes(c.type)?`<label class="prop-row"><span>Адресных разрядов</span><input id="propAddressBits" type="number" min="1" max="5" value="${props.addressBits}"></label>`:'';
+      const portHeading=`<div class="port-heading"><b>Порты</b><span>${(def.inputs||[]).length} вход. · ${(def.outputs||[]).length} вых.</span></div>`;
       const orientationControl=`<label class="prop-row"><span>Направление</span><select id="propOrientation">${[['east','Вправо →'],['south','Вниз ↓'],['west','Влево ←'],['north','Вверх ↑']].map(([v,label])=>`<option value="${v}" ${(c.props.orientation||'east')===v?'selected':''}>${label}</option>`).join('')}</select></label>`;
       const extraControls = (c.type==='input'?`<label class="prop-row"><span>Значение (0–${2**bitWidth(c)-1})</span><input id="propValue" type="number" min="0" max="${2**bitWidth(c)-1}" value="${c.state.value||0}"></label>`:'')+(['ram','rom'].includes(c.type)?`<label class="memory-label">Содержимое памяти (DEC или 0xHEX)<textarea id="propMemory" spellcheck="false">${(c.state.memory||[]).map(v=>v===null?'X':v).join(' ')}</textarea></label><button id="applyMemoryBtn" class="full-width">Записать содержимое</button>`:'')+(c.type==='shifter'?`<label class="prop-row"><span>Направление</span><select id="propDirection"><option value="left" ${c.state.direction!=='right'?'selected':''}>Влево</option><option value="right" ${c.state.direction==='right'?'selected':''}>Вправо</option></select></label>`:'');
-      selectionInfo.innerHTML = `<p><span class="badge">${def.group}</span></p><p><b>${escapeHTML(def.name)}</b></p><div class="desc-card">${escapeHTML(def.desc || 'Описание модуля пока не задано.')}</div><div class="prop-box">${bitControl}${addressControl}${orientationControl}${extraControls}${def.source?'<button id="openSubcircuitBtn" class="full-width">Открыть подсхему →</button>':''}<p id="propValidationWarning" class="prop-warning" hidden></p><p class="muted">${pinInfo}. A0/S0 — младший разряд. Допустимы только целые положительные значения. При уменьшении разрядности несовместимые провода удаляются.</p></div><p class="muted">ID: ${escapeHTML(c.id)}</p><p>Входы: ${escapeHTML(ins)}</p><p>Выходы: ${escapeHTML(outs)}</p>`;
+      selectionInfo.innerHTML = `<p><span class="badge">${def.group}</span></p><p><b>${escapeHTML(def.name)}</b></p><div class="desc-card">${escapeHTML(def.desc || 'Описание модуля пока не задано.')}</div><div class="prop-box">${portHeading}${countControls}${channelControl}${bitControl}${addressControl}${orientationControl}${extraControls}${def.source?'<button id="openSubcircuitBtn" class="full-width">Открыть подсхему →</button>':''}<p id="propValidationWarning" class="prop-warning" hidden></p><p class="muted">${pinInfo}. A0/S0 — младший разряд. Допустимы только целые положительные значения. При уменьшении числа портов несовместимые провода удаляются; действие можно отменить.</p></div><p class="muted">ID: ${escapeHTML(c.id)}</p><p>Входы: ${escapeHTML(ins)}</p><p>Выходы: ${escapeHTML(outs)}</p>`;
       bindComponentPropertyControls(c);
       bindExtendedControls(c);
       document.getElementById('openSubcircuitBtn')?.addEventListener('click',()=>openSubcircuit(c));
@@ -1916,18 +1909,10 @@
   canvas.addEventListener('contextmenu',e=>{e.preventDefault();cancelInteraction();});
   canvas.addEventListener('pointercancel',cancelInteraction);
 
-  function cutWire(wire,pos) {
-    const pts=wirePoints(wire);let nearest=null;
-    for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);if(len<70)continue;const t=Math.max(30/len,Math.min(1-30/len,((pos.x-a.x)*dx+(pos.y-a.y)*dy)/(len*len))),p={x:a.x+t*dx,y:a.y+t*dy},distance=Math.hypot(pos.x-p.x,pos.y-p.y);if(!nearest||distance<nearest.distance)nearest={i,p,dx:dx/len,dy:dy/len,distance};}
-    if(!nearest||nearest.distance>20){setStatus('Для разреза выберите прямой участок длиной хотя бы 70 пикселей.');return;}
-    if(state.components.length>298||state.wires.length>=2000){setStatus('Недостаточно места в лимите проекта для контактов разреза.');return;}
-    pushHistory();const {i,p,dx,dy}=nearest,orientation=Math.abs(dx)>Math.abs(dy)?(dx>0?'east':'west'):(dy>0?'south':'north');
-    const a=make('contact',Math.max(0,p.x-dx*22-10),Math.max(0,p.y-dy*22-10),{}, {orientation}),b=make('contact',Math.max(0,p.x+dx*22-10),Math.max(0,p.y+dy*22-10),{}, {orientation});
-    const route=points=>points.filter((v,j)=>j===0||v.x!==points[j-1].x||v.y!==points[j-1].y).slice(0,16);
-    state.wires=state.wires.filter(w=>w.id!==wire.id);
-    state.wires.push({...wire,to:{cid:a.id,pid:'in'},bends:route(pts.slice(1,i+1))},{...wire,id:'w'+state.nextId++,from:{cid:b.id,pid:'out'},bends:route(pts.slice(i+1,-1))});
-    state.sourceColors[`${b.id}:out`]=wire.color;state.selected=null;state.wireStart=null;state.wireBends=[];simulate();
-    setStatus('Провод разделён на две части. Соедините контакты, чтобы восстановить связь; Ctrl Z отменяет разрез.');
+  function cutWire(wire) {
+    pushHistory();state.wires=state.wires.filter(w=>w.id!==wire.id);
+    state.selected=null;state.wireStart=null;state.wireBends=[];state.issueFocus=null;simulate();
+    setStatus('Провод удалён целиком. Ctrl Z — восстановить.');
   }
 
   function setTool(tool) {
@@ -1935,7 +1920,7 @@
     state.wireStart = null;state.wireBends=[];
     [selectToolBtn, wireToolBtn, textToolBtn, panToolBtn, document.getElementById('cutTool')].filter(Boolean).forEach(btn => btn.classList.toggle('active', btn.dataset.tool === tool));
     canvas.className = `tool-${tool}`;
-    setStatus(tool === 'select' ? 'Выбор: клик по объекту — выбор; удерживай мышь и тяни по пустому месту — область.' : tool === 'wire' ? 'Провод: выбери выход, затем вход.' : tool === 'cut' ? 'Ножницы: нажмите на провод, чтобы разделить его. Esc — выбор.' : tool === 'text' ? 'Текст/переменная: введи обычную подпись или @A для подключаемой переменной.' : 'Поле: тащи рабочую область для перемещения.');
+    setStatus(tool === 'select' ? 'Выбор: клик по объекту — выбор; удерживай мышь и тяни по пустому месту — область.' : tool === 'wire' ? 'Провод: выбери выход, затем вход.' : tool === 'cut' ? 'Ножницы: нажмите на провод, чтобы удалить его целиком. Esc — сбросить выбор.' : tool === 'text' ? 'Текст/переменная: введи обычную подпись или @A для подключаемой переменной.' : 'Поле: тащи рабочую область для перемещения.');
     draw();
   }
 
@@ -2141,7 +2126,7 @@
   zoomInBtn.addEventListener('click', () => setZoom(nextZoom(1)));
   zoomOutBtn.addEventListener('click', () => setZoom(nextZoom(-1)));
   if (wireGlowAllToggle) wireGlowAllToggle.addEventListener('change', () => setWireGlowMode(wireGlowAllToggle.checked ? 'all' : 'active'));
-  viewport.addEventListener('wheel', e => { if(!e.deltaY)return;e.preventDefault();setZoom(nextZoom(e.deltaY < 0 ? 1 : -1), e); }, { passive: false });
+  viewport.addEventListener('wheel', e => { if(state.tool!=='pan'||!e.deltaY)return;e.preventDefault();setZoom(nextZoom(e.deltaY < 0 ? 1 : -1), e); }, { passive: false });
 
 
 
