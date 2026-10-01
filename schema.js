@@ -1,6 +1,6 @@
 (function (root) {
   'use strict';
-  const TYPES = ['and','or','xor','not','buffer','const0','const1','switch','indicator','clock','variable','half_adder','full_adder','dff','rs_latch','jk_ff','register','multiplexer','demultiplexer','decoder','encoder','seven_segment','display','nand','nor','xnor','input','probe','tristate','splitter','adder','subtractor','multiplier','divider','comparator','shifter','tff','sync_register','counter','shift_register','ram','rom'];
+  const TYPES = ['and','or','xor','not','buffer','const0','const1','switch','indicator','clock','variable','half_adder','full_adder','dff','rs_latch','jk_ff','register','multiplexer','demultiplexer','decoder','encoder','seven_segment','display','nand','nor','xnor','input','probe','tristate','splitter','adder','subtractor','multiplier','divider','comparator','shifter','tff','sync_register','counter','shift_register','ram','rom','contact'];
   const COLORS = ['#da5371','#5080d9','#119e8a','#d88c32','#9460cc','#329bb6','#b19a37','#c958a8'];
   const plain = v => v !== null && typeof v === 'object' && !Array.isArray(v);
   const color = v => typeof v === 'string' && /^#[\da-f]{6}$/i.test(v);

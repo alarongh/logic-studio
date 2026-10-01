@@ -7,7 +7,7 @@ function engine(){
   const fake=()=>({value:'',dataset:{},style:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){},appendChild(){},setAttribute(){},contains(){return false},getContext(){return new Proxy({measureText(){return{width:40}}},{get(t,p){return t[p]||(()=>{})},set(t,p,v){t[p]=v;return true}})},querySelectorAll(){return[]},clientWidth:1000,clientHeight:700});
   const document={createElement(){return fake()},getElementById(id){if(!nodes.has(id))nodes.set(id,fake());return nodes.get(id)},querySelectorAll(){return[]},addEventListener(){},body:fake(),activeElement:null};
   const context={document,window:{addEventListener(){}},CircuitSchema:require('../schema.js'),CircuitExtended:require('../extended.js'),CircuitSymbols:{svg(){return ''},draw(){}},localStorage:{getItem(){return null}},setInterval(){},requestAnimationFrame(){},performance:{now(){return 0}},structuredClone,console,getComputedStyle(){return{getPropertyValue(){return''}}}};
-  let src=fs.readFileSync('app.js','utf8');src=src.slice(0,src.indexOf('  loadImages().then('))+'globalThis.api={state,simulate,make,getPins,generateTruthTable,buildCustomTruthTable,simulateSubcircuit,installCustomDefs,snapshot,restoreSnapshot};})();';
+  let src=fs.readFileSync('app.js','utf8');src=src.slice(0,src.indexOf('  loadImages().then('))+'globalThis.api={state,simulate,make,getPins,generateTruthTable,buildCustomTruthTable,simulateSubcircuit,installCustomDefs,snapshot,restoreSnapshot,cutWire,wirePoints,pinPos};})();';
   vm.runInNewContext(src,context);const api=context.api;api.state.running=false;return api;
 }
 const wire=(e,from,pid,to,target)=>e.state.wires.push({id:'w'+e.state.nextId++,from:{cid:from.id,pid},to:{cid:to.id,pid:target},color:'#123456'});
@@ -27,3 +27,12 @@ test('sequential subcircuit instances have independent memory and round-trip',()
   const saved=e.snapshot();clk.state.on=false;e.simulate();const clean=require('../schema.js').normalize(JSON.parse(saved));assert.equal(clean.components.find(c=>c.id===a.id).state.childStates[0].state.q,'1');e.restoreSnapshot(saved);assert.equal(e.state.components.find(c=>c.id===a.id).outputs.o0,'1');
 });
 
+
+test('scissors preserve electrical isolation and reconnect in all four directions',()=>{
+  for(const [start,end] of [[[100,100],[600,100]],[[600,100],[100,100]],[[100,100],[600,700]],[[100,700],[600,100]]]){
+    const e=engine(),a=e.make('switch',...start,{on:true}),b=e.make('indicator',...end);wire(e,a,'out',b,'in');e.simulate();assert.equal(b.inputs.in,'1');
+    const original=e.snapshot(),w=e.state.wires[0],points=e.wirePoints(w);const segments=points.slice(1).map((p,i)=>({a:points[i],b:p,len:Math.hypot(p.x-points[i].x,p.y-points[i].y)})).sort((a,b)=>b.len-a.len);const segment=segments[0];
+    e.cutWire(w,{x:(segment.a.x+segment.b.x)/2,y:(segment.a.y+segment.b.y)/2});const contacts=e.state.components.filter(c=>c.type==='contact');assert.equal(contacts.length,2);assert.equal(b.inputs.in,'Z');assert.equal(e.state.wires.length,2);
+    wire(e,contacts[0],'out',contacts[1],'in');e.simulate();assert.equal(b.inputs.in,'1');require('../schema.js').normalize(JSON.parse(e.snapshot()));e.restoreSnapshot(original);assert.equal(e.state.components.length,2);assert.equal(e.state.wires.length,1);assert.equal(e.state.components.find(c=>c.id===b.id).inputs.in,'1');
+  }
+});

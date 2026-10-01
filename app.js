@@ -293,8 +293,8 @@
     def.name = dynamicNameFor(comp, base);
     const pinCount = Math.max((def.inputs || []).filter(p => p.side === 'left').length, (def.outputs || []).filter(p => p.side === 'right').length);
     const bottomCount = (def.inputs || []).filter(p => p.side === 'bottom').length + (def.outputs || []).filter(p => p.side === 'bottom').length;
-    def.h = Math.max(base.h || 70, 52 + pinCount * 16, bottomCount ? 100 : 0);
-    def.w = Math.max(base.w || 100, bottomCount > 2 ? 156 : 0, (comp.type === 'encoder' ? 138 : 0));
+    def.h = comp.type==='contact'?20:Math.max(base.h || 70, 52 + pinCount * 16, bottomCount ? 100 : 0);
+    def.w = comp.type==='contact'?20:Math.max(base.w || 100, bottomCount > 2 ? 156 : 0, (comp.type === 'encoder' ? 138 : 0));
     const rotation=comp.props.orientation||'east';
     const orient=p=>{
       if(rotation==='east')return p;
@@ -577,7 +577,7 @@
   }
 
   function setZoom(value, anchorEvent = null) {
-    const next = Math.max(0.5, Math.min(2, Number(value) || 1));
+    const next = Math.max(0.1, Math.min(3, Number(value) || 1));
     if (next === state.zoom) return;
 
     let anchorWorldX;
@@ -1231,6 +1231,7 @@
   function drawComponent(c) {
     const def=getDef(c);if(!def)return;
     const selected=isComponentSelected(c.id), pins=getPins(c);
+    if(c.type==='contact'){ctx.save();ctx.strokeStyle=selected?cssVar('--accent','#087f73'):cssVar('--component-text','#364d59');ctx.fillStyle=cssVar('--board-bg','#f6f8f9');ctx.lineWidth=2;ctx.beginPath();ctx.arc(c.x+10,c.y+10,7,0,Math.PI*2);ctx.fill();ctx.stroke();pins.forEach(p=>drawPin(c,p));ctx.restore();return;}
     const extraBottom=pins.some(p=>p.side==='bottom')?18:0;
     ctx.save();ctx.fillStyle=cssVar('--component-fill','#fff');
     ctx.strokeStyle=selected?cssVar('--accent','#087f73'):cssVar('--component-border','#b8c8ce');
@@ -1295,7 +1296,7 @@
     ctx.fillStyle = active ? cssVar('--accent-soft','#e8f5f1') : unknown ? '#fcebd7' : cssVar('--category-bg','#f5f7f8');
     ctx.strokeStyle = 'rgba(15,23,42,.25)'; ctx.lineWidth = 1;
     roundRect(ctx, c.x + def.w - 36, c.y + 5, 31, 22, 7); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#0f172a'; ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = cssVar('--ink','#263b46'); ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(text, c.x + def.w - 20.5, c.y + 16);
     ctx.restore();
   }
@@ -1364,7 +1365,7 @@
     const x = c.x + 60, y = c.y + 19, w = 42, h = 58, t = 8;
     const on = cssVar('--display-text', '#a7d916');
     const off = document.body.classList.contains('theme-dark') ? '#172033' : '#1e293b';
-    const active = SEGMENTS[char] || ''; 
+    const active = SEGMENTS[char] || '';
     const seg = {
       a:[x+t,y,w-2*t,t], b:[x+w-t,y+t,t,h/2-t], c:[x+w-t,y+h/2,t,h/2-t], d:[x+t,y+h-t,w-2*t,t],
       e:[x,y+h/2,t,h/2-t], f:[x,y+t,t,h/2-t], g:[x+t,y+h/2-t/2,w-2*t,t]
@@ -1908,12 +1909,33 @@
 
   function escapeHTML(s) { return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 
+  function cancelInteraction() {
+    state.wireStart=null;state.wireBends=[];state.selected=null;state.selecting=null;state.pendingSelect=null;state.dragging=null;state.panning=null;
+    canvas.classList.remove('panning');updateInspector();setStatus('Выбор и незавершённый провод сброшены.');draw();
+  }
+  canvas.addEventListener('contextmenu',e=>{e.preventDefault();cancelInteraction();});
+  canvas.addEventListener('pointercancel',cancelInteraction);
+
+  function cutWire(wire,pos) {
+    const pts=wirePoints(wire);let nearest=null;
+    for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);if(len<70)continue;const t=Math.max(30/len,Math.min(1-30/len,((pos.x-a.x)*dx+(pos.y-a.y)*dy)/(len*len))),p={x:a.x+t*dx,y:a.y+t*dy},distance=Math.hypot(pos.x-p.x,pos.y-p.y);if(!nearest||distance<nearest.distance)nearest={i,p,dx:dx/len,dy:dy/len,distance};}
+    if(!nearest||nearest.distance>20){setStatus('Для разреза выберите прямой участок длиной хотя бы 70 пикселей.');return;}
+    if(state.components.length>298||state.wires.length>=2000){setStatus('Недостаточно места в лимите проекта для контактов разреза.');return;}
+    pushHistory();const {i,p,dx,dy}=nearest,orientation=Math.abs(dx)>Math.abs(dy)?(dx>0?'east':'west'):(dy>0?'south':'north');
+    const a=make('contact',Math.max(0,p.x-dx*22-10),Math.max(0,p.y-dy*22-10),{}, {orientation}),b=make('contact',Math.max(0,p.x+dx*22-10),Math.max(0,p.y+dy*22-10),{}, {orientation});
+    const route=points=>points.filter((v,j)=>j===0||v.x!==points[j-1].x||v.y!==points[j-1].y).slice(0,16);
+    state.wires=state.wires.filter(w=>w.id!==wire.id);
+    state.wires.push({...wire,to:{cid:a.id,pid:'in'},bends:route(pts.slice(1,i+1))},{...wire,id:'w'+state.nextId++,from:{cid:b.id,pid:'out'},bends:route(pts.slice(i+1,-1))});
+    state.sourceColors[`${b.id}:out`]=wire.color;state.selected=null;state.wireStart=null;state.wireBends=[];simulate();
+    setStatus('Провод разделён на две части. Соедините контакты, чтобы восстановить связь; Ctrl Z отменяет разрез.');
+  }
+
   function setTool(tool) {
     state.tool = tool;
-    state.wireStart = null;
-    [selectToolBtn, wireToolBtn, textToolBtn, panToolBtn].forEach(btn => btn.classList.toggle('active', btn.dataset.tool === tool));
+    state.wireStart = null;state.wireBends=[];
+    [selectToolBtn, wireToolBtn, textToolBtn, panToolBtn, document.getElementById('cutTool')].filter(Boolean).forEach(btn => btn.classList.toggle('active', btn.dataset.tool === tool));
     canvas.className = `tool-${tool}`;
-    setStatus(tool === 'select' ? 'Выбор: клик по объекту — выбор; удерживай мышь и тяни по пустому месту — область.' : tool === 'wire' ? 'Провод: выбери выход, затем вход.' : tool === 'text' ? 'Текст/переменная: введи обычную подпись или @A для подключаемой переменной.' : 'Поле: тащи рабочую область для перемещения.');
+    setStatus(tool === 'select' ? 'Выбор: клик по объекту — выбор; удерживай мышь и тяни по пустому месту — область.' : tool === 'wire' ? 'Провод: выбери выход, затем вход.' : tool === 'cut' ? 'Ножницы: нажмите на провод, чтобы разделить его. Esc — выбор.' : tool === 'text' ? 'Текст/переменная: введи обычную подпись или @A для подключаемой переменной.' : 'Поле: тащи рабочую область для перемещения.');
     draw();
   }
 
@@ -1943,7 +1965,7 @@
   }
 
   canvas.addEventListener('pointerdown', e => {
-    if(e.button>1)return;canvas.setPointerCapture(e.pointerId);
+    if(e.button>1)return;canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);
     document.querySelector('.menu').open=false;
     const pos = getPos(e); state.mouse = pos;
     if (state.tool === 'pan' || e.button === 1 || e.altKey) {
@@ -1952,14 +1974,15 @@
       return;
     }
     if (state.tool === 'text') { addTextAt(pos); return; }
+    if(state.tool==='cut'){const w=hitTestWire(pos);if(w)cutWire(w,pos);else setStatus('Нажмите непосредственно на провод.');return;}
     if (state.tool === 'wire') {
       const hitPin = hitTestPin(pos);
       if (hitPin) {
         if (!state.wireStart) { state.wireBends=[];state.wireStart = hitPin; setStatus(`Выбран вывод ${hitPin.pin.label}. Теперь нажми на ${hitPin.pin.dir === 'out' ? 'вход' : 'выход'} другого модуля.`); }
-        else connect(state.wireStart, hitPin);
+        else if(state.wireStart.comp.id===hitPin.comp.id&&state.wireStart.pin.id===hitPin.pin.id)cancelInteraction();else connect(state.wireStart, hitPin);
         draw(); return;
       }
-      if(state.wireStart){if(state.wireBends.length>=16){setStatus('Максимум 16 точек маршрута.');return;}state.wireBends.push({x:snap(pos.x),y:snap(pos.y)});setStatus('Точка маршрута добавлена. Нажмите вход для завершения или Esc для отмены.');draw();return;}
+      if(state.wireStart){if(!e.shiftKey){cancelInteraction();return;}if(state.wireBends.length>=16){setStatus('Максимум 16 точек маршрута.');return;}state.wireBends.push({x:snap(pos.x),y:snap(pos.y)});setStatus('Точка маршрута добавлена. Нажмите вход для завершения; Esc или пустое поле — отмена.');draw();return;}
       return;
     }
     if(state.selected?.kind==='wire'){const w=state.wires.find(w=>w.id===state.selected.id),i=(w?.bends||[]).findIndex(p=>Math.hypot(p.x-pos.x,p.y-pos.y)<10);if(i>=0){state.dragging={kind:'bend',id:w.id,index:i,start:{...pos},historyPushed:false};return;}}
@@ -1978,7 +2001,8 @@
       updateInspector(); draw(); return;
     }
     const wire = hitTestWire(pos);
-    if (wire) { state.selected = { kind: 'wire', id: wire.id }; updateInspector(); draw(); return; }
+    if (wire) { state.selected = state.selected?.kind==='wire'&&state.selected.id===wire.id?null:{ kind: 'wire', id: wire.id }; updateInspector(); draw(); return; }
+    state.selected=null;updateInspector();draw();
     state.pendingSelect = { start: pos, end: pos, mode: e.shiftKey ? 'add' : (e.altKey ? 'remove' : 'replace') };
   });
 
@@ -2043,6 +2067,7 @@
   });
 
   canvas.addEventListener('dblclick', e => {
+    if(state.tool==='cut'||state.tool==='wire')return;
     const pos = getPos(e);
     const text = hitTestText(pos);
     if (text) { state.selected = { kind: 'text', id: text.id }; editSelection(); return; }
@@ -2057,7 +2082,9 @@
   window.addEventListener('keydown', e => {
     const key = e.key.toLowerCase();
     if ((e.ctrlKey || e.metaKey) && key === 's') { e.preventDefault(); exportJSON(); return; }
-    if (document.getElementById('importDialog').open || isEditableTarget(e.target)) return;
+    if (document.getElementById('importDialog').open || document.getElementById('themeDialog')?.open) return;
+    if(e.key==='Escape'){e.preventDefault();cancelInteraction();return;}
+    if(isEditableTarget(e.target))return;
     if((e.ctrlKey||e.metaKey)&&key==='a'){e.preventDefault();state.selected={kind:'multi',components:state.components.map(c=>c.id),wires:state.wires.map(w=>w.id),texts:state.texts.map(t=>t.id)};updateInspector();draw();return;}
     if (key === '/') { e.preventDefault(); moduleSearch.focus(); return; }
     if ((e.ctrlKey || e.metaKey) && key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
@@ -2065,7 +2092,7 @@
     if ((e.ctrlKey || e.metaKey) && key === 'c') { e.preventDefault(); copySelection(); return; }
     if ((e.ctrlKey || e.metaKey) && key === 'v') { e.preventDefault(); pasteClipboard(); return; }
     if (e.key === 'Delete' || e.key === 'Backspace') { if (state.selected) { e.preventDefault(); deleteSelection(); } return; }
-    if (e.key === 'Escape') { state.wireStart = null; state.selecting = null; state.pendingSelect = null; state.selected = null; updateInspector(); setStatus('Выбор и незавершённые действия сброшены.'); draw(); return; }
+
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && state.selected) {
       e.preventDefault();
       const step = e.shiftKey ? GRID : SNAP;
@@ -2078,6 +2105,7 @@
     if (key === 'w' && !e.ctrlKey && !e.metaKey) setTool('wire');
     if (key === 't' && !e.ctrlKey && !e.metaKey) setTool('text');
     if (key === 'h' && !e.ctrlKey && !e.metaKey) setTool('pan');
+    if (key === 'c' && !e.ctrlKey && !e.metaKey) setTool('cut');
   });
 
   runBtn.addEventListener('click', () => { state.running = !state.running; runBtn.classList.toggle('active', state.running); runBtn.textContent = state.running ? 'Ⅱ Пауза' : '▷ Запустить'; setStatus(state.running ? 'Симуляция запущена.' : 'Симуляция остановлена.'); });
@@ -2098,7 +2126,7 @@
   });
   clearBtn.addEventListener('click', () => { if(confirm('Очистить поле?')) { pushHistory(); resetBoard(); } });
   sampleBtn.addEventListener('click', () => { pushHistory(); createSample(); });
-  themeBtn.addEventListener('click', () => setTheme(state.theme === 'dark' ? 'light' : 'dark'));
+  // Theme events and persistence live in themes.js.
   saveBtn.addEventListener('click', exportJSON);
   loadBtn.addEventListener('click', () => loadFile.click());
   loadFile.addEventListener('change', importJSON);
@@ -2108,12 +2136,12 @@
   pasteBtn.addEventListener('click', pasteClipboard);
   editBtn.addEventListener('click', editSelection);
   deleteBtn.addEventListener('click', deleteSelection);
-  [selectToolBtn, wireToolBtn, textToolBtn, panToolBtn].forEach(btn => btn.addEventListener('click', () => setTool(btn.dataset.tool)));
+  [selectToolBtn, wireToolBtn, textToolBtn, panToolBtn, document.getElementById('cutTool')].filter(Boolean).forEach(btn => btn.addEventListener('click', () => setTool(btn.dataset.tool)));
   zoomSelect.addEventListener('change', () => setZoom(zoomSelect.value));
   zoomInBtn.addEventListener('click', () => setZoom(nextZoom(1)));
   zoomOutBtn.addEventListener('click', () => setZoom(nextZoom(-1)));
   if (wireGlowAllToggle) wireGlowAllToggle.addEventListener('change', () => setWireGlowMode(wireGlowAllToggle.checked ? 'all' : 'active'));
-  viewport.addEventListener('wheel', e => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(nextZoom(e.deltaY < 0 ? 1 : -1), e); } }, { passive: false });
+  viewport.addEventListener('wheel', e => { if(!e.deltaY)return;e.preventDefault();setZoom(nextZoom(e.deltaY < 0 ? 1 : -1), e); }, { passive: false });
 
 
 
@@ -2408,7 +2436,7 @@
   }
 
   function nextZoom(dir) {
-    const values = [0.5, 0.75, 1, 1.25, 1.5, 2];
+    const values = [0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3];
     let idx = values.findIndex(v => v >= state.zoom - 0.001);
     if (idx < 0) idx = 2;
     return values[Math.max(0, Math.min(values.length-1, idx + dir))];
@@ -2483,7 +2511,15 @@
   }
 
   function loadProjectText(text, history=true) {
-    const data=CircuitSchema.parse(text);
+    const data=prepareProject(typeof CircuitCode==='undefined'?CircuitSchema.parse(text):CircuitCode.parse(text));
+    if(history)pushHistory();
+    installCustomDefs(data.customDefs||[]);
+    Object.assign(state,{components:data.components,wires:data.wires,texts:data.texts,nextId:data.nextId,colorIndex:data.colorIndex,sourceColors:data.sourceColors,selected:null,wireStart:null,wireBends:[],dragging:null,selecting:null,pendingSelect:null,clock:false,tickNo:0,truthTable:null,showIssueMarkers:false,issueFocus:null});
+    projectTitle.value=data.title;projectDescription=data.description;updateReport();updateTruthPanel();simulate();fitCircuit();
+    setStatus(`Открыта схема «${data.title}»: ${data.components.length} блоков, ${data.wires.length} соединений.`);saveLocal();
+  }
+  function prepareProject(raw) {
+    const data=CircuitSchema.normalize(raw);
     const lookup=Object.fromEntries((data.customDefs||[]).map(d=>[d.type,d]));
     const projectPins=(c,dir)=>lookup[c.type]?lookup[c.type][dir==='out'?'outputs':'inputs']:getPins(c,dir);
     data.components=data.components.map(c=>normalizeComponentProps({...c,state:{...defaultState(c.type),...c.state}}));
@@ -2497,11 +2533,7 @@
       for(const w of def.source.wires)if(!projectPins(internal.get(w.from.cid),'out').some(p=>p.id===w.from.pid)||!projectPins(internal.get(w.to.cid),'in').some(p=>p.id===w.to.pid))throw new Error(`Подсхема ${def.name}: неверные пины провода ${w.id}.`);
       for(const [ports,dir]of [[def.source.inputs,'in'],[def.source.outputs,'out']])for(const port of ports)if(!projectPins(internal.get(port.cid),dir).some(p=>p.id===port.pid))throw new Error(`Подсхема ${def.name}: неверный порт ${port.pid}.`);
     }
-    if(history)pushHistory();
-    installCustomDefs(data.customDefs||[]);
-    Object.assign(state,{components:data.components,wires:data.wires,texts:data.texts,nextId:data.nextId,colorIndex:data.colorIndex,sourceColors:data.sourceColors,selected:null,wireStart:null,dragging:null,selecting:null,pendingSelect:null,clock:false,tickNo:0,truthTable:null,showIssueMarkers:false,issueFocus:null});
-    projectTitle.value=data.title;projectDescription=data.description;updateReport();updateTruthPanel();simulate();fitCircuit();
-    setStatus(`Открыта схема «${data.title}»: ${data.components.length} блоков, ${data.wires.length} соединений.`);saveLocal();
+    return data;
   }
 
   function showImportError(message) {
@@ -2518,7 +2550,7 @@
     const minX=Math.min(...boxes.map(b=>b.x)),minY=Math.min(...boxes.map(b=>b.y));
     const maxX=Math.max(...boxes.map(b=>b.x+b.w)),maxY=Math.max(...boxes.map(b=>b.y+b.h));
     const target=Math.min(1,(viewport.clientWidth-40)/(maxX-minX),(viewport.clientHeight-40)/(maxY-minY));
-    const z=[.5,.75,1].filter(v=>v<=target).pop()||.5;setZoom(z);
+    const z=[.1,.25,.5,.75,1].filter(v=>v<=target).pop()||.1;setZoom(z);
     viewport.scrollLeft=Math.max(0,(minX+maxX)/2*z-viewport.clientWidth/2);
     viewport.scrollTop=Math.max(0,(minY+maxY)/2*z-viewport.clientHeight/2);
   }
@@ -2824,14 +2856,7 @@
     b.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const tabs=[...document.querySelectorAll('[data-panel]')];const next=tabs[(tabs.indexOf(b)+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];showPanel(next.dataset.panel);next.focus();});
   });
   showPanel('properties');
-  const importDialog=document.getElementById('importDialog');
-  document.getElementById('aiImportBtn').addEventListener('click',()=>{document.getElementById('importError').hidden=true;importDialog.showModal();document.getElementById('importText').focus();});
-  document.getElementById('importFileBtn').addEventListener('click',()=>loadFile.click());
-  document.getElementById('applyImportBtn').addEventListener('click',()=>{try{loadProjectText(document.getElementById('importText').value);importDialog.close();}catch(err){showImportError(err.message);}});
-  document.getElementById('copyPromptBtn').addEventListener('click',async()=>{
-    const text='Собери логическую схему для Logic Studio. Верни один JSON-блок с title, description, components, wires, texts. Каждый компонент: id, type, x, y, state, props. Каждый провод: id, from:{cid,pid}, to:{cid,pid}; только выход → вход. Типы: '+CircuitSchema.TYPES.join(', ')+'. Базовые пины: switch/const/clock out; and/or/xor a,b → y; not/buffer a → y; indicator in; variable in → out; half_adder a,b → s,c; full_adder a,b,cin → s,cout; dff d,clk → q,nq; rs_latch s,r → q,nq; jk_ff j,clk,k → q,nq. Координаты x 80–3000, y 80–2000, разнеси блоки минимум на 220 px по горизонтали и 150 px по вертикали. Для switch state.on boolean. Props.bitWidth по умолчанию 1. Проверь все ID и соединения. Для остальных типов используй документацию AI_IMPORT.md.';
-    try{await navigator.clipboard.writeText(text);document.getElementById('copyPromptBtn').textContent='Промпт скопирован ✓';}catch{document.getElementById('importText').value=text;setStatus('Промпт вставлен в поле: скопируйте его вручную.');}
-  });
+  if(typeof CircuitWorkbench!=='undefined')CircuitWorkbench.attach({read:projectData,load:loadProjectText,validate:prepareProject,definition:(c,library)=>library.find(d=>d.type===c.type)||getDef(c),download:downloadText});
   document.getElementById('synthesizeBtn').addEventListener('click',()=>{const error=document.getElementById('expressionError');try{const data=CircuitSynthesis.build(document.getElementById('expressionText').value);loadProjectText(JSON.stringify(data));error.hidden=true;setStatus('Схема построена из формул. Общие подвыражения объединены.');}catch(err){error.textContent=err.message;error.hidden=false;}});
   document.getElementById('backToProject').addEventListener('click',returnToProject);
   document.getElementById('busMode').addEventListener('change',e=>{state.busConnect=e.target.checked;setStatus(state.busConnect?'Жгут: один клик соединяет все разряды группы.':'Провод: соединяется один пин.');});
@@ -2848,6 +2873,7 @@
   loadImages().then(() => {
     installCustomDefs([]);
     setTheme(state.theme);
+    if(typeof CircuitThemes!=='undefined')CircuitThemes.attach(mode=>{state.theme=mode;themeCache.clear();themeBtn.textContent=mode==='dark'?'☀ Светлая':'☾ Тёмная';draw();});
     setWireGlowMode(state.wireGlowMode);
     updateTruthPanel();
     buildPalette(); resizeCanvas();
