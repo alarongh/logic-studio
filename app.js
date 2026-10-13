@@ -2858,7 +2858,7 @@
   loadImages().then(() => {
     installCustomDefs([]);
     setTheme(state.theme);
-    if(typeof CircuitThemes!=='undefined')CircuitThemes.attach(mode=>{state.theme=mode;themeCache.clear();themeBtn.textContent=mode==='dark'?'☀ Светлая':'☾ Тёмная';draw();});
+    const themeControls=typeof CircuitThemes!=='undefined'?CircuitThemes.attach(mode=>{state.theme=mode;themeCache.clear();themeBtn.textContent=mode==='dark'?'☀ Светлая':'☾ Тёмная';draw();}):null;
     setWireGlowMode(state.wireGlowMode);
     updateTruthPanel();
     buildPalette(); resizeCanvas();
@@ -2868,6 +2868,7 @@
     runBtn.classList.add('active'); runBtn.textContent = 'Ⅱ Пауза';
     setTool('select');
     fitCircuit();
+    if(themeControls?.recovered)setStatus('Оформление восстановлено. Сохранённая схема не изменена.');
     requestAnimationFrame(frame);
   });
   window.addEventListener('resize', resizeCanvas);

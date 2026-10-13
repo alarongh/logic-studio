@@ -37,3 +37,21 @@ test('port controls configure inputs and output copies and restore removed wirin
 test('multiplexer channel count changes selector ports and is visible in properties',async({page})=>{await importText(page,{title:'Mux',components:[{id:'M',type:'multiplexer',x:150,y:100}],wires:[]});await at(page,210,150);await expect(page.locator('#propChannelCount')).toHaveValue('4');await page.locator('#propChannelCount').selectOption('8');await page.locator('#board').focus();const data=await exportData(page);expect(data.components[0].props.addressBits).toBe(3);await at(page,210,150);await expect(page.locator('.port-heading span')).toContainText('11 вход.');});
 
 test('import labels are neutral and import guide stays available',async({page})=>{await expect(page.locator('#aiImportBtn')).toHaveText('Импорт');await page.locator('#aiImportBtn').click();await expect(page.locator('#copyPromptBtn')).toHaveText('Логика импорта');expect(await page.locator('#importDialog').textContent()).not.toMatch(/ИИ|Промпт/);});
+
+test('unreadable saved theme recovers automatically without changing the saved circuit',async({page})=>{
+ await importText(page,simpleWire);await exportData(page);
+ await page.evaluate(()=>localStorage.setItem('logic_studio_palette',JSON.stringify({preset:'light',accent:'#000000',board:'#000000',panel:'#000000',ink:'#000000'})));
+ await page.reload();await expect(page.locator('#statusText')).toContainText('Оформление восстановлено');
+ const colors=await page.locator('body').evaluate(b=>({ink:b.style.getPropertyValue('--ink'),panel:b.style.getPropertyValue('--panel'),stored:JSON.parse(localStorage.getItem('logic_studio_palette'))}));
+ expect(colors.ink).not.toBe(colors.panel);expect(colors.stored.ink).toBe(colors.ink);
+ const data=await exportData(page);expect(data.title).toBe('Cut');expect(data.components).toHaveLength(2);expect(data.wires).toHaveLength(1);
+ await page.reload();await expect(page.locator('#projectTitle')).toHaveValue('Cut');expect(await page.locator('body').evaluate(b=>b.style.getPropertyValue('--ink'))).toBe(colors.ink);
+});
+
+test('reset-theme link resets only appearance, and custom edits cannot hide the interface',async({page})=>{
+ await importText(page,simpleWire);await exportData(page);await page.locator('#appearanceBtn').click();await page.locator('#themePreset').selectOption('ocean');await page.locator('#theme-ink').fill('#1c3445');
+ await expect(page.locator('#themeContrastHint')).toBeVisible();expect(await page.locator('#theme-ink').inputValue()).not.toBe('#1c3445');
+ await page.goto('/?reset-theme=1');await expect(page.locator('#statusText')).toContainText('Оформление восстановлено');await expect(page).not.toHaveURL(/reset-theme/);
+ expect(await page.locator('body').evaluate(b=>b.style.getPropertyValue('--panel'))).toBe('#ffffff');
+ const data=await exportData(page);expect(data.title).toBe('Cut');expect(data.components).toHaveLength(2);expect(data.wires).toHaveLength(1);
+});
