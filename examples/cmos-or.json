@@ -1,0 +1,614 @@
+{
+  "title": "КМОП ИЛИ · 6 транзисторов",
+  "description": "Y = A ИЛИ B. pMOS P1/P2 и nMOS N1/N2 образуют NOR, P3/N3 инвертируют N. Ожидается: 00→0, 01→1, 10→1, 11→1. S/D двунаправленные; VDD=1, GND=0. Это цифровая модель проводимости, без аналоговых токов, напряжений и задержек.",
+  "components": [
+    {
+      "id": "A",
+      "type": "switch",
+      "x": 70,
+      "y": 290,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {
+        "label": "A"
+      }
+    },
+    {
+      "id": "B",
+      "type": "switch",
+      "x": 70,
+      "y": 500,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {
+        "label": "B"
+      }
+    },
+    {
+      "id": "VDD",
+      "type": "const1",
+      "x": 70,
+      "y": 60,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {
+        "label": "VDD"
+      }
+    },
+    {
+      "id": "GND",
+      "type": "const0",
+      "x": 70,
+      "y": 1060,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {
+        "label": "GND"
+      }
+    },
+    {
+      "id": "GA",
+      "type": "junction",
+      "x": 320,
+      "y": 313,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {
+        "label": "A"
+      }
+    },
+    {
+      "id": "GB",
+      "type": "junction",
+      "x": 380,
+      "y": 523,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {
+        "label": "B"
+      }
+    },
+    {
+      "id": "POWER",
+      "type": "junction",
+      "x": 1000,
+      "y": 80,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {
+        "label": "VDD"
+      }
+    },
+    {
+      "id": "GROUND",
+      "type": "junction",
+      "x": 1000,
+      "y": 1100,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {
+        "label": "GND"
+      }
+    },
+    {
+      "id": "P1",
+      "type": "pmos",
+      "x": 520,
+      "y": 200,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {}
+    },
+    {
+      "id": "P2",
+      "type": "pmos",
+      "x": 520,
+      "y": 400,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {}
+    },
+    {
+      "id": "N1",
+      "type": "nmos",
+      "x": 500,
+      "y": 720,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {}
+    },
+    {
+      "id": "N2",
+      "type": "nmos",
+      "x": 780,
+      "y": 720,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {}
+    },
+    {
+      "id": "N",
+      "type": "junction",
+      "x": 900,
+      "y": 540,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {
+        "label": "N = НЕ(A ИЛИ B)"
+      }
+    },
+    {
+      "id": "P3",
+      "type": "pmos",
+      "x": 1180,
+      "y": 220,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {}
+    },
+    {
+      "id": "N3",
+      "type": "nmos",
+      "x": 1180,
+      "y": 720,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {}
+    },
+    {
+      "id": "Y",
+      "type": "junction",
+      "x": 1370,
+      "y": 540,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {
+        "label": "Y"
+      }
+    },
+    {
+      "id": "OUT",
+      "type": "indicator",
+      "x": 1480,
+      "y": 514,
+      "props": {
+        "bitWidth": 1
+      },
+      "state": {
+        "label": "Y"
+      }
+    }
+  ],
+  "wires": [
+    {
+      "id": "cw1",
+      "from": {
+        "cid": "A",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "GA",
+        "pid": "p"
+      },
+      "color": "#da5371"
+    },
+    {
+      "id": "cw2",
+      "from": {
+        "cid": "B",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "GB",
+        "pid": "p"
+      },
+      "color": "#5080d9"
+    },
+    {
+      "id": "cw3",
+      "from": {
+        "cid": "GA",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "P1",
+        "pid": "g"
+      },
+      "color": "#da5371",
+      "bends": [
+        {
+          "x": 330,
+          "y": 250
+        }
+      ]
+    },
+    {
+      "id": "cw4",
+      "from": {
+        "cid": "GA",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "N1",
+        "pid": "g"
+      },
+      "color": "#da5371",
+      "bends": [
+        {
+          "x": 330,
+          "y": 770
+        }
+      ]
+    },
+    {
+      "id": "cw5",
+      "from": {
+        "cid": "GB",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "P2",
+        "pid": "g"
+      },
+      "color": "#5080d9",
+      "bends": [
+        {
+          "x": 390,
+          "y": 450
+        }
+      ]
+    },
+    {
+      "id": "cw6",
+      "from": {
+        "cid": "GB",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "N2",
+        "pid": "g"
+      },
+      "color": "#5080d9",
+      "bends": [
+        {
+          "x": 390,
+          "y": 770
+        }
+      ]
+    },
+    {
+      "id": "cw7",
+      "from": {
+        "cid": "VDD",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "POWER",
+        "pid": "p"
+      },
+      "color": "#119e8a",
+      "bends": [
+        {
+          "x": 190,
+          "y": 90
+        }
+      ]
+    },
+    {
+      "id": "cw8",
+      "from": {
+        "cid": "POWER",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "P1",
+        "pid": "s"
+      },
+      "color": "#119e8a",
+      "bends": [
+        {
+          "x": 622,
+          "y": 90
+        }
+      ]
+    },
+    {
+      "id": "cw9",
+      "from": {
+        "cid": "POWER",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "P3",
+        "pid": "s"
+      },
+      "color": "#119e8a",
+      "bends": [
+        {
+          "x": 1282,
+          "y": 90
+        }
+      ]
+    },
+    {
+      "id": "cw10",
+      "from": {
+        "cid": "GND",
+        "pid": "out"
+      },
+      "to": {
+        "cid": "GROUND",
+        "pid": "p"
+      },
+      "color": "#9460cc",
+      "bends": [
+        {
+          "x": 190,
+          "y": 1110
+        }
+      ]
+    },
+    {
+      "id": "cw11",
+      "from": {
+        "cid": "GROUND",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "N1",
+        "pid": "s"
+      },
+      "color": "#9460cc",
+      "bends": [
+        {
+          "x": 602,
+          "y": 1110
+        }
+      ]
+    },
+    {
+      "id": "cw12",
+      "from": {
+        "cid": "GROUND",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "N2",
+        "pid": "s"
+      },
+      "color": "#9460cc",
+      "bends": [
+        {
+          "x": 882,
+          "y": 1110
+        }
+      ]
+    },
+    {
+      "id": "cw13",
+      "from": {
+        "cid": "GROUND",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "N3",
+        "pid": "s"
+      },
+      "color": "#9460cc",
+      "bends": [
+        {
+          "x": 1282,
+          "y": 1110
+        }
+      ]
+    },
+    {
+      "id": "cw14",
+      "from": {
+        "cid": "P1",
+        "pid": "d"
+      },
+      "to": {
+        "cid": "P2",
+        "pid": "s"
+      },
+      "color": "#119e8a"
+    },
+    {
+      "id": "cw15",
+      "from": {
+        "cid": "P2",
+        "pid": "d"
+      },
+      "to": {
+        "cid": "N",
+        "pid": "p"
+      },
+      "color": "#d88c32",
+      "bends": [
+        {
+          "x": 622,
+          "y": 550
+        }
+      ]
+    },
+    {
+      "id": "cw16",
+      "from": {
+        "cid": "N",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "N1",
+        "pid": "d"
+      },
+      "color": "#d88c32",
+      "bends": [
+        {
+          "x": 602,
+          "y": 550
+        }
+      ]
+    },
+    {
+      "id": "cw17",
+      "from": {
+        "cid": "N",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "N2",
+        "pid": "d"
+      },
+      "color": "#d88c32",
+      "bends": [
+        {
+          "x": 882,
+          "y": 550
+        }
+      ]
+    },
+    {
+      "id": "cw18",
+      "from": {
+        "cid": "N",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "P3",
+        "pid": "g"
+      },
+      "color": "#d88c32",
+      "bends": [
+        {
+          "x": 1050,
+          "y": 550
+        },
+        {
+          "x": 1050,
+          "y": 270
+        }
+      ]
+    },
+    {
+      "id": "cw19",
+      "from": {
+        "cid": "N",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "N3",
+        "pid": "g"
+      },
+      "color": "#d88c32",
+      "bends": [
+        {
+          "x": 1050,
+          "y": 550
+        },
+        {
+          "x": 1050,
+          "y": 770
+        }
+      ]
+    },
+    {
+      "id": "cw20",
+      "from": {
+        "cid": "P3",
+        "pid": "d"
+      },
+      "to": {
+        "cid": "Y",
+        "pid": "p"
+      },
+      "color": "#329bb6",
+      "bends": [
+        {
+          "x": 1282,
+          "y": 550
+        }
+      ]
+    },
+    {
+      "id": "cw21",
+      "from": {
+        "cid": "Y",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "N3",
+        "pid": "d"
+      },
+      "color": "#329bb6",
+      "bends": [
+        {
+          "x": 1282,
+          "y": 550
+        }
+      ]
+    },
+    {
+      "id": "cw22",
+      "from": {
+        "cid": "Y",
+        "pid": "p"
+      },
+      "to": {
+        "cid": "OUT",
+        "pid": "in"
+      },
+      "color": "#329bb6"
+    }
+  ],
+  "texts": [
+    {
+      "id": "ct1",
+      "x": 60,
+      "y": 30,
+      "text": "КМОП ИЛИ: NOR + инвертор, 3 pMOS + 3 nMOS",
+      "size": 22,
+      "color": "#566573"
+    },
+    {
+      "id": "ct2",
+      "x": 520,
+      "y": 160,
+      "text": "pMOS последовательно",
+      "size": 16,
+      "color": "#566573"
+    },
+    {
+      "id": "ct3",
+      "x": 500,
+      "y": 690,
+      "text": "nMOS параллельно",
+      "size": 16,
+      "color": "#566573"
+    },
+    {
+      "id": "ct4",
+      "x": 1180,
+      "y": 180,
+      "text": "Инвертор",
+      "size": 16,
+      "color": "#566573"
+    }
+  ]
+}

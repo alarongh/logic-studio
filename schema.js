@@ -1,6 +1,6 @@
 (function (root) {
   'use strict';
-  const TYPES = ['and','or','xor','not','buffer','const0','const1','switch','indicator','clock','variable','half_adder','full_adder','dff','rs_latch','jk_ff','register','multiplexer','demultiplexer','decoder','encoder','seven_segment','display','nand','nor','xnor','input','probe','tristate','splitter','adder','subtractor','multiplier','divider','comparator','shifter','tff','sync_register','counter','shift_register','ram','rom','contact'];
+  const TYPES = ['and','or','xor','not','buffer','const0','const1','switch','indicator','clock','variable','half_adder','full_adder','dff','rs_latch','jk_ff','register','multiplexer','demultiplexer','decoder','encoder','seven_segment','display','nand','nor','xnor','input','probe','tristate','splitter','adder','subtractor','multiplier','divider','comparator','shifter','tff','sync_register','counter','shift_register','ram','rom','contact','nmos','pmos','junction'];
   const COLORS = ['#da5371','#5080d9','#119e8a','#d88c32','#9460cc','#329bb6','#b19a37','#c958a8'];
   const plain = v => v !== null && typeof v === 'object' && !Array.isArray(v);
   const color = v => typeof v === 'string' && /^#[\da-f]{6}$/i.test(v);
@@ -42,6 +42,7 @@
       if(c.props?.outputCount!==undefined){if(!['and','or','xor','nand','nor','xnor'].includes(c.type))fail('Число выходов настраивается у логических вентилей.');props.outputCount=range(c.props.outputCount,8,'Число выходов');}
       if(['and','or','xor','nand','nor','xnor'].includes(c.type)&&((props.inputCount||2)*(props.bitWidth||1)>96||(props.outputCount||1)*(props.bitWidth||1)>96))fail('У вентиля допустимо до 96 разрядов на каждой стороне.');
       if (c.props?.orientation !== undefined) { if (!['east','south','west','north'].includes(c.props.orientation)) fail('Некорректная ориентация элемента.'); props.orientation=c.props.orientation; }
+      if(['nmos','pmos','junction'].includes(c.type)&&props.bitWidth!==undefined&&props.bitWidth!==1)fail('Транзисторы и общий узел поддерживают один разряд.');
       const state = normalizeState(c.state);
       return { id:id(c.id), type:c.type, x:coordinate(c.x,3400), y:coordinate(c.y,2300), props, state, inputs:{}, outputs:{}, prevInputs:{} };
     });

@@ -2,11 +2,26 @@ const {test,expect}=require('@playwright/test');
 const fs=require('node:fs');
 const {build}=require('../../synthesis.js');
 let errors;
-test.beforeEach(async({page})=>{errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');await expect(page.locator('#moduleCount')).toHaveText('43');});
+test.beforeEach(async({page})=>{errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');await expect(page.locator('#moduleCount')).toHaveText(String(require('../../schema.js').TYPES.length));});
 test.afterEach(()=>expect(errors).toEqual([]));
 async function importText(page,data){await page.locator('#aiImportBtn').click();await page.locator('#importText').fill(typeof data==='string'?data:JSON.stringify(data));await page.locator('#applyImportBtn').click();}
 async function exportData(page){await page.locator('.menu summary').click();const promise=page.waitForEvent('download');await page.locator('#saveBtn').click();const download=await promise;return JSON.parse(fs.readFileSync(await download.path(),'utf8'));}
 async function at(page,x,y,action='click'){const point=await page.evaluate(({x,y})=>{const b=document.getElementById('board').getBoundingClientRect();const z=Number(document.getElementById('zoomSelect').value);return{x:b.x+x*z,y:b.y+y*z};},{x,y});await page.mouse[action](point.x,point.y);}
+
+test('six-transistor OR imports through code with live preview and generates all four correct rows',async({page})=>{
+ const code=fs.readFileSync('examples/cmos-or.logic','utf8');await page.locator('#aiImportBtn').click();await page.locator('#importText').fill(code);await expect(page.locator('#codePreview > svg')).toHaveCount(1);await expect(page.locator('#importError')).not.toBeVisible();await page.locator('#applyImportBtn').click();
+ await page.locator('#tab-analysis').click();await page.locator('#truthBtn').click();expect(await page.locator('#truthInfo tbody tr').evaluateAll(rs=>rs.map(r=>[...r.querySelectorAll('td')].map(c=>c.textContent)))).toEqual([['0','0','0'],['0','1','1'],['1','0','1'],['1','1','1']]);
+ const data=await exportData(page);expect(data.components.filter(c=>c.type==='nmos')).toHaveLength(3);expect(data.components.filter(c=>c.type==='pmos')).toHaveLength(3);expect(data.components.some(c=>c.type==='or')).toBe(false);
+ await page.reload();await expect(page.locator('#projectTitle')).toHaveValue('КМОП ИЛИ · 6 транзисторов');await page.locator('#aiImportBtn').click();await expect(page.locator('#importText')).toHaveValue(/nmos N1/);
+});
+
+test('wire tool connects an output to D, S to a common node and the node to a digital input',async({page})=>{
+ await importText(page,{title:'MOS wiring',components:[{id:'DATA',type:'const1',x:50,y:50},{id:'GATE',type:'const1',x:50,y:250},{id:'T',type:'nmos',x:400,y:300},{id:'J',type:'junction',x:200,y:500},{id:'O',type:'indicator',x:650,y:400}],wires:[]});
+ await page.locator('#zoomSelect').selectOption('1');await page.locator('#wireTool').click();
+ for(const[a,b]of [[[140,81],[502,300]],[[502,400],[210,510]],[[210,510],[650,436]],[[140,281],[400,350]]]){await at(page,...a);await at(page,...b);}
+ const data=await exportData(page);expect(data.wires).toHaveLength(4);expect(data.components.find(c=>c.id==='O').inputs.in).toBe('1');
+ await page.locator('#selectTool').click();await at(page,450,350);await expect(page.locator('.port-heading span')).toContainText('2 двунапр.');await expect(page.locator('#propBitWidth')).toHaveCount(0);await expect(page.locator('#selectionInfo')).toContainText('S=1');
+});
 test('half-adder truth table, signals and dark theme',async({page})=>{await page.locator('#tab-analysis').click();await page.locator('#truthBtn').click();const rows=page.locator('#truthInfo tbody tr');await expect(rows).toHaveCount(4);for(const [i,want]of [[0,['0','0','0','0']],[1,['0','1','1','0']],[2,['1','0','1','0']],[3,['1','1','0','1']]])expect(await rows.nth(i).locator('td').allTextContents()).toEqual(want);await page.locator('#themeBtn').click();await expect(page.locator('body')).toHaveClass(/theme-dark/);await at(page,166,153,'dblclick');const data=await exportData(page);expect(data.components.find(c=>c.type==='switch').state.on).toBe(false);});
 test('invalid import leaves current project and history intact',async({page})=>{const before=await exportData(page);await importText(page,{components:[{id:'m1',type:'not',x:10,y:10}],wires:[{id:'w2',from:{cid:'m1',pid:'bad'},to:{cid:'m1',pid:'a'}}]});await expect(page.locator('#importError')).toBeVisible();await expect(page.locator('#undoBtn')).toBeDisabled();await page.locator('#importDialog button[aria-label="Закрыть"]').click();expect((await exportData(page)).components).toEqual(before.components);});
 test('Markdown import, export, undo and autosave restore',async({page})=>{const data=build('Y = A NAND B');data.title='ИИ отчёт';data.description='<img src=x onerror=alert(1)>';await importText(page,'Отчёт\n```json\n'+JSON.stringify(data)+'\n```');await expect(page.locator('#importDialog')).not.toBeVisible();await expect(page.locator('#projectTitle')).toHaveValue('ИИ отчёт');await expect(page.locator('#reportText')).toHaveText(data.description);await expect(page.locator('#reportText img')).toHaveCount(0);await page.locator('#undoBtn').click();await expect(page.locator('#projectTitle')).toHaveValue('Полусумматор');await page.locator('#redoBtn').click();await exportData(page);await page.reload();await expect(page.locator('#projectTitle')).toHaveValue('ИИ отчёт');});

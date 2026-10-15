@@ -1,0 +1,51 @@
+circuit "КМОП ИЛИ · 6 транзисторов"
+description "Y = A ИЛИ B. pMOS P1/P2 и nMOS N1/N2 образуют NOR, P3/N3 инвертируют N. Ожидается: 00→0, 01→1, 10→1, 11→1. S/D двунаправленные; VDD=1, GND=0. Это цифровая модель проводимости, без аналоговых токов, напряжений и задержек."
+
+// Блоки: тип имя(параметры) at(x, y)
+switch A(width=1, label="A") at(70, 290)
+switch B(width=1, label="B") at(70, 500)
+const1 VDD(width=1, label="VDD") at(70, 60)
+const0 GND(width=1, label="GND") at(70, 1060)
+junction GA(width=1, label="A") at(320, 313)
+junction GB(width=1, label="B") at(380, 523)
+junction POWER(width=1, label="VDD") at(1000, 80)
+junction GROUND(width=1, label="GND") at(1000, 1100)
+pmos P1(width=1) at(520, 200)
+pmos P2(width=1) at(520, 400)
+nmos N1(width=1) at(500, 720)
+nmos N2(width=1) at(780, 720)
+junction N(width=1, label="N = НЕ(A ИЛИ B)") at(900, 540)
+pmos P3(width=1) at(1180, 220)
+nmos N3(width=1) at(1180, 720)
+junction Y(width=1, label="Y") at(1370, 540)
+indicator OUT(width=1, label="Y") at(1480, 514)
+
+// Соединения: выход -> вход; S/D и junction.p двунаправленные
+A.out -> GA.p {"id":"cw1","color":"#da5371"}
+B.out -> GB.p {"id":"cw2","color":"#5080d9"}
+GA.p -> P1.g {"id":"cw3","color":"#da5371","bends":[{"x":330,"y":250}]}
+GA.p -> N1.g {"id":"cw4","color":"#da5371","bends":[{"x":330,"y":770}]}
+GB.p -> P2.g {"id":"cw5","color":"#5080d9","bends":[{"x":390,"y":450}]}
+GB.p -> N2.g {"id":"cw6","color":"#5080d9","bends":[{"x":390,"y":770}]}
+VDD.out -> POWER.p {"id":"cw7","color":"#119e8a","bends":[{"x":190,"y":90}]}
+POWER.p -> P1.s {"id":"cw8","color":"#119e8a","bends":[{"x":622,"y":90}]}
+POWER.p -> P3.s {"id":"cw9","color":"#119e8a","bends":[{"x":1282,"y":90}]}
+GND.out -> GROUND.p {"id":"cw10","color":"#9460cc","bends":[{"x":190,"y":1110}]}
+GROUND.p -> N1.s {"id":"cw11","color":"#9460cc","bends":[{"x":602,"y":1110}]}
+GROUND.p -> N2.s {"id":"cw12","color":"#9460cc","bends":[{"x":882,"y":1110}]}
+GROUND.p -> N3.s {"id":"cw13","color":"#9460cc","bends":[{"x":1282,"y":1110}]}
+P1.d -> P2.s {"id":"cw14","color":"#119e8a"}
+P2.d -> N.p {"id":"cw15","color":"#d88c32","bends":[{"x":622,"y":550}]}
+N.p -> N1.d {"id":"cw16","color":"#d88c32","bends":[{"x":602,"y":550}]}
+N.p -> N2.d {"id":"cw17","color":"#d88c32","bends":[{"x":882,"y":550}]}
+N.p -> P3.g {"id":"cw18","color":"#d88c32","bends":[{"x":1050,"y":550},{"x":1050,"y":270}]}
+N.p -> N3.g {"id":"cw19","color":"#d88c32","bends":[{"x":1050,"y":550},{"x":1050,"y":770}]}
+P3.d -> Y.p {"id":"cw20","color":"#329bb6","bends":[{"x":1282,"y":550}]}
+Y.p -> N3.d {"id":"cw21","color":"#329bb6","bends":[{"x":1282,"y":550}]}
+Y.p -> OUT.in {"id":"cw22","color":"#329bb6"}
+
+// Подписи
+text ct1 "КМОП ИЛИ: NOR + инвертор, 3 pMOS + 3 nMOS" at(60, 30) {"size":22,"color":"#566573"}
+text ct2 "pMOS последовательно" at(520, 160) {"size":16,"color":"#566573"}
+text ct3 "nMOS параллельно" at(500, 690) {"size":16,"color":"#566573"}
+text ct4 "Инвертор" at(1180, 180) {"size":16,"color":"#566573"}

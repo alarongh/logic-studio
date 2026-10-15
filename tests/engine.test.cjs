@@ -6,11 +6,36 @@ function engine(){
   const nodes=new Map();
   const fake=()=>({value:'',dataset:{},style:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){},appendChild(){},setAttribute(){},contains(){return false},getContext(){return new Proxy({measureText(){return{width:40}}},{get(t,p){return t[p]||(()=>{})},set(t,p,v){t[p]=v;return true}})},querySelectorAll(){return[]},clientWidth:1000,clientHeight:700});
   const document={createElement(){return fake()},getElementById(id){if(!nodes.has(id))nodes.set(id,fake());return nodes.get(id)},querySelectorAll(){return[]},addEventListener(){},body:fake(),activeElement:null};
-  const context={document,window:{addEventListener(){}},CircuitSchema:require('../schema.js'),CircuitExtended:require('../extended.js'),CircuitSymbols:{svg(){return ''},draw(){}},localStorage:{getItem(){return null}},setInterval(){},requestAnimationFrame(){},performance:{now(){return 0}},structuredClone,console,getComputedStyle(){return{getPropertyValue(){return''}}}};
+  const context={document,window:{addEventListener(){}},CircuitNetworks:require('../networks.js'),CircuitSchema:require('../schema.js'),CircuitExtended:require('../extended.js'),CircuitSymbols:{svg(){return ''},draw(){}},localStorage:{getItem(){return null}},setInterval(){},requestAnimationFrame(){},performance:{now(){return 0}},structuredClone,console,getComputedStyle(){return{getPropertyValue(){return''}}}};
   let src=fs.readFileSync('app.js','utf8');src=src.slice(0,src.indexOf('  loadImages().then('))+'globalThis.api={state,simulate,make,getPins,generateTruthTable,buildCustomTruthTable,simulateSubcircuit,installCustomDefs,snapshot,restoreSnapshot,cutWire,wirePoints,pinPos};})();';
   vm.runInNewContext(src,context);const api=context.api;api.state.running=false;return api;
 }
 const wire=(e,from,pid,to,target)=>e.state.wires.push({id:'w'+e.state.nextId++,from:{cid:from.id,pid},to:{cid:to.id,pid:target},color:'#123456'});
+test('adding an isolated common node preserves every existing example output',()=>{
+ for(const file of fs.readdirSync('examples').filter(n=>n.endsWith('.json'))){
+  const run=withNode=>{const e=engine(),data=JSON.parse(fs.readFileSync('examples/'+file,'utf8'));e.state.components=data.components;e.state.wires=data.wires;if(withNode)e.make('junction',3200,2200);e.simulate();return JSON.stringify(e.state.components.filter(c=>c.type!=='junction').map(c=>({id:c.id,outputs:c.outputs})));};
+  assert.equal(run(true),run(false),file);
+ }
+});
+test('real tristate bus on a common node resolves 1, 0, Z and conflicting X',()=>{
+ const e=engine(),a=e.make('const1',0,0),b=e.make('const0',0,0),ea=e.make('switch',0,0),eb=e.make('switch',0,0),ta=e.make('tristate',0,0),tb=e.make('tristate',0,0),j=e.make('junction',0,0),o=e.make('indicator',0,0);
+ wire(e,a,'out',ta,'a');wire(e,b,'out',tb,'a');wire(e,ea,'out',ta,'en');wire(e,eb,'out',tb,'en');wire(e,ta,'y',j,'p');wire(e,tb,'y',j,'p');wire(e,j,'p',o,'in');
+ for(const[x,y,want]of [[1,0,'1'],[0,1,'0'],[0,0,'Z'],[1,1,'X'],[1,0,'1']]){ea.state.on=!!x;eb.state.on=!!y;e.simulate();assert.equal(o.inputs.in,want);assert.equal(j.terminals.p,want);if(want==='X')assert.ok(e.state.signalIssues.some(i=>i.type==='conflict'));}
+});
+test('six-transistor CMOS OR is 0,1,1,1 in either component order and recovers after every toggle',()=>{
+ for(const reverse of [false,true]){
+  const e=engine(),data=require('../examples/cmos-or.json');e.state.components=structuredClone(data.components);e.state.wires=structuredClone(data.wires);if(reverse)e.state.components.reverse();
+  const c=id=>e.state.components.find(c=>c.id===id);
+  for(const [a,b]of [[0,0],[0,1],[1,0],[1,1],[0,0],[1,1],[0,1]]){c('A').state.on=!!a;c('B').state.on=!!b;e.simulate();assert.equal(c('OUT').inputs.in,String(a|b));assert.equal(c('Y').terminals.p,String(a|b));assert.equal(e.state.simStats.stable,true);assert.equal(e.state.simStats.conflicts,0);}
+ }
+});
+test('transistor subnet works inside reusable subcircuits with external node ports',()=>{
+ const e=engine(),raw=structuredClone(require('../examples/cmos-or.json')),source={components:raw.components.filter(c=>!['A','B','OUT'].includes(c.id)),wires:raw.wires.filter(w=>!['A','B'].includes(w.from.cid)&&w.to.cid!=='OUT'),inputs:[{cid:'GA',pid:'p'},{cid:'GB',pid:'p'}],outputs:[{cid:'Y',pid:'p'}]};
+ const inputPins=[{id:'i0',label:'A'},{id:'i1',label:'B'}],outputPins=[{id:'o0',label:'Y'}];
+ for(const a of ['0','1'])for(const b of ['0','1'])assert.equal(e.simulateSubcircuit(source,{i0:a,i1:b},inputPins,outputPins).o0,String(Number(a)|Number(b)));
+ e.installCustomDefs([{type:'custom_cmos',name:'CMOS OR',inputs:inputPins,outputs:outputPins,source,table:{}}]);const a=e.make('switch',0,0),b=e.make('switch',0,0),gate=e.make('custom_cmos',0,0);wire(e,a,'out',gate,'i0');wire(e,b,'out',gate,'i1');
+ for(const x of [0,1])for(const y of [0,1]){a.state.on=!!x;b.state.on=!!y;e.simulate();assert.equal(gate.outputs.o0,String(x|y));}
+});
 test('half adder is correct for every combination',()=>{const e=engine();const a=e.make('switch',0,0),b=e.make('switch',0,0),h=e.make('half_adder',0,0);wire(e,a,'out',h,'a');wire(e,b,'out',h,'b');for(let x=0;x<2;x++)for(let y=0;y<2;y++){a.state.on=!!x;b.state.on=!!y;e.simulate();assert.equal(h.outputs.s,String(x^y));assert.equal(h.outputs.c,String(x&y));}});
 test('X/Z logic respects controlling values',()=>{const e=engine();const zero=e.make('const0',0,0),and=e.make('and',0,0),or=e.make('or',0,0),one=e.make('const1',0,0);wire(e,zero,'out',and,'a');wire(e,one,'out',or,'a');e.simulate();assert.equal(and.outputs.y,'0');assert.equal(or.outputs.y,'1');});
 test('pipeline flip-flops sample simultaneously independent of array order',()=>{for(const order of [false,true]){const e=engine();const input=e.make('switch',0,0,{on:true}),clk=e.make('switch',0,0),d1=e.make('dff',0,0),d2=e.make('dff',0,0);wire(e,input,'out',d1,'d');wire(e,d1,'q',d2,'d');wire(e,clk,'out',d1,'clk');wire(e,clk,'out',d2,'clk');if(order)e.state.components.reverse();e.simulate();clk.state.on=true;e.simulate();assert.equal(d1.outputs.q,'1');assert.equal(d2.outputs.q,'0');e.simulate();assert.equal(d2.outputs.q,'0');clk.state.on=false;e.simulate();clk.state.on=true;e.simulate();assert.equal(d2.outputs.q,'1');}});

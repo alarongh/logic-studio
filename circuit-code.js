@@ -63,7 +63,7 @@
     for(const def of p.customDefs)lines.push('library '+JSON.stringify(def));
     lines.push('','// Блоки: тип имя(параметры) at(x, y)');
     for(const c of p.components){const args=[...Object.entries(c.props).map(([k,v])=>`${k==='bitWidth'?'width':k==='addressBits'?'address':k}=${JSON.stringify(v)}`),...Object.entries(c.state).map(([k,v])=>`${k}=${JSON.stringify(v)}`)];lines.push(`${c.type} ${c.id}${args.length?'('+args.join(', ')+')':''} at(${c.x}, ${c.y})`);}
-    lines.push('','// Соединения: выход -> вход');
+    lines.push('','// Соединения: выход -> вход; S/D и junction.p двунаправленные');
     for(const w of p.wires){const options={id:w.id,color:w.color,...(w.bends?{bends:w.bends}:{})};lines.push(`${w.from.cid}.${w.from.pid} -> ${w.to.cid}.${w.to.pid} ${JSON.stringify(options)}`);}
     if(p.texts.length){lines.push('','// Подписи');for(const t of p.texts)lines.push(`text ${t.id} ${JSON.stringify(t.text)} at(${t.x}, ${t.y}) ${JSON.stringify({size:t.size,color:t.color})}`);}
     return lines.join('\n')+'\n';

@@ -154,6 +154,7 @@
     comp.prevInputs = comp.prevInputs || {};
     comp.props = { ...defaultPropsFor(comp.type), ...(comp.props || {}) };
     comp.props.bitWidth = clampInt(comp.props.bitWidth ?? comp.state.bitWidth, LIMITS.minBitWidth, LIMITS.maxBitWidth, 1);
+    if(CircuitNetworks.passive.has(comp.type))comp.props.bitWidth=1;
     if ('addressBits' in defaultPropsFor(comp.type)) {
       comp.props.addressBits = clampInt(comp.props.addressBits ?? comp.state.addressBits, LIMITS.minAddressBits, LIMITS.maxAddressBits, defaultPropsFor(comp.type).addressBits);
     }
@@ -284,21 +285,21 @@
     if (!base) return null;
     normalizeComponentProps(comp);
     const pins = dynamicPinsFor(comp);
-    const def = pins ? { ...base, inputs: pins.inputs, outputs: pins.outputs } : { ...base };
+    const def = pins ? { ...base, ...pins } : { ...base };
     def.name = dynamicNameFor(comp, base);
     if(CircuitExtended.ports.isGate(comp.type))def.desc=CircuitExtended.ports.description(comp);
     const pinCount = Math.max((def.inputs || []).filter(p => p.side === 'left').length, (def.outputs || []).filter(p => p.side === 'right').length);
     const bottomCount = (def.inputs || []).filter(p => p.side === 'bottom').length + (def.outputs || []).filter(p => p.side === 'bottom').length;
-    def.h = comp.type==='contact'?20:Math.max(base.h || 70, 52 + pinCount * 16, bottomCount ? 100 : 0);
-    def.w = comp.type==='contact'?20:Math.max(base.w || 100, bottomCount > 2 ? 156 : 0, (comp.type === 'encoder' ? 138 : 0));
+    def.h = ['contact','junction'].includes(comp.type)?20:Math.max(base.h || 70, 52 + pinCount * 16, bottomCount ? 100 : 0);
+    def.w = ['contact','junction'].includes(comp.type)?20:Math.max(base.w || 100, bottomCount > 2 ? 156 : 0, (comp.type === 'encoder' ? 138 : 0));
     const rotation=comp.props.orientation||'east';
     const orient=p=>{
-      if(rotation==='east')return p;
+      if(rotation==='east'||p.side==='center')return p;
       const sides={south:{left:'top',right:'bottom',top:'right',bottom:'left'},west:{left:'right',right:'left',top:'bottom',bottom:'top'},north:{left:'bottom',right:'top',top:'left',bottom:'right'}};
       const flip=rotation==='west'||(rotation==='south'&&['left','right'].includes(p.side))||(rotation==='north'&&['top','bottom'].includes(p.side));
       return{...p,side:sides[rotation][p.side],y:flip?1-p.y:p.y};
     };
-    def.inputs=def.inputs.map(orient);def.outputs=def.outputs.map(orient);
+    def.inputs=def.inputs.map(orient);def.outputs=def.outputs.map(orient);def.inouts=(def.inouts||[]).map(orient);
     if(['north','south'].includes(rotation)){const width=def.w;def.w=def.h;def.h=width;}
     return def;
   }
@@ -357,6 +358,7 @@
 
   const groupLabels = {
     'BASIC': 'Ввод и вывод',
+    'TRANSISTORS':'Транзисторы и узлы',
     'GATES': 'Логические элементы',
     'ADDER': 'СУММАТОРЫ',
     'MEMORY': 'ПАМЯТЬ',
@@ -490,7 +492,7 @@
         item.className = 'palette-item' + (def.custom ? ' custom-component' : '');
         item.title = def.desc || def.name;
         item.dataset.search = [type, def.name, def.group, groupLabels[def.group] || '', def.desc || ''].join(' ').toLowerCase();
-        item.innerHTML = `<span class="palette-symbol">${CircuitSymbols.svg(type)}</span><span>${escapeHTML(def.name)}<small>${(def.inputs||[]).length} вход. · ${(def.outputs||[]).length} вых.</small></span>`;
+        item.innerHTML = `<span class="palette-symbol">${CircuitSymbols.svg(type)}</span><span>${escapeHTML(def.name)}<small>${(def.inputs||[]).length} вход. · ${(def.outputs||[]).length} вых.${def.inouts?.length?' · '+def.inouts.length+' S/D': ''}</small></span>`;
         item.addEventListener('click', () => addComponent(type));
         grid.appendChild(item);
       }
@@ -638,11 +640,13 @@
     if (!def) return arr;
     for (const p of (def.inputs || [])) arr.push({ ...p, dir: 'in' });
     for (const p of (def.outputs || [])) arr.push({ ...p, dir: 'out' });
-    return dir ? arr.filter(p => p.dir === dir) : arr;
+    for(const p of def.inouts||[])arr.push({...p,dir:'io'});
+    return dir ? arr.filter(p => p.dir === dir || p.dir === 'io') : arr;
   }
 
   function pinPos(comp, pinDef) {
     const def = getDef(comp);
+    if(pinDef.side==='center')return{x:comp.x+def.w/2,y:comp.y+def.h/2};
     if (pinDef.side === 'top' || pinDef.side === 'bottom') {
       return {
         x: comp.x + def.w * pinDef.y,
@@ -713,10 +717,10 @@
   }
 
   function connect(a, b) {
-    const out = a?.pin.dir === 'out' ? a : b?.pin.dir === 'out' ? b : null;
-    const inn = a?.pin.dir === 'in' ? a : b?.pin.dir === 'in' ? b : null;
-    if (!out || !inn || out.comp.id === inn.comp.id) {
-      setStatus('Соединение должно идти от выхода одного модуля к входу другого.');
+    const pair=a?.pin.dir==='out'&&b?.pin.dir!=='out'?[a,b]:b?.pin.dir==='out'&&a?.pin.dir!=='out'?[b,a]:a?.pin.dir==='io'&&b?.pin.dir!=='out'?[a,b]:b?.pin.dir==='io'&&a?.pin.dir!=='out'?[b,a]:[];
+    const [out,inn]=pair;
+    if (!out || !inn || (out.comp.id === inn.comp.id && out.pin.dir!=='io' && inn.pin.dir!=='io')) {
+      setStatus('Соедините выход со входом либо с двунаправленным S/D или общим узлом.');
       return;
     }
     const series=(component,dir,p)=>{
@@ -726,11 +730,13 @@
     const outs=state.busConnect?series(out.comp,'out',out.pin):[out.pin];
     const ins=state.busConnect?series(inn.comp,'in',inn.pin):[inn.pin];
     if(outs.length!==ins.length){setStatus(`Разрядности жгутов не совпадают: ${outs.length} и ${ins.length}.`);return;}
-    pushHistory();const route=state.wireStart?.pin.dir==='out'?state.wireBends:[...state.wireBends].reverse();
+    const network=CircuitNetworks.enabled(state.components);
+    if(state.wires.some(w=>w.from.cid===out.comp.id&&w.from.pid===out.pin.id&&w.to.cid===inn.comp.id&&w.to.pid===inn.pin.id)){cancelInteraction();return;}
+    pushHistory();const route=state.wireStart===out?state.wireBends:[...state.wireBends].reverse();
     const busKey=`${out.comp.id}:${outs[0].id}`;
     const busColor=state.sourceColors[busKey]||WIRE_COLORS[state.colorIndex++%WIRE_COLORS.length];
     outs.forEach((pin,i)=>{
-      state.wires=state.wires.filter(w=>!(w.to.cid===inn.comp.id&&w.to.pid===ins[i].id));
+      if(!network)state.wires=state.wires.filter(w=>!(w.to.cid===inn.comp.id&&w.to.pid===ins[i].id));
       const sourceKey=`${out.comp.id}:${pin.id}`;state.sourceColors[sourceKey] ||= busColor;
       state.wires.push({id:'w'+state.nextId++,from:{cid:out.comp.id,pid:pin.id},to:{cid:inn.comp.id,pid:ins[i].id},color:state.sourceColors[sourceKey],...(route.length?{bends:structuredClone(route)}:{})});
     });state.wireBends=[];
@@ -776,6 +782,7 @@
   function signalText(v) { return toSignal(v); }
   function signalKnown(v) { return toSignal(v) === SIG.ZERO || toSignal(v) === SIG.ONE; }
   function signalUnknown(v) { return toSignal(v) === SIG.X || toSignal(v) === SIG.Z; }
+  function pinSignal(comp,id){return toSignal(comp?.netSignals?.[id]??comp?.terminals?.[id]??comp?.outputs?.[id]??comp?.inputs?.[id]);}
   function getInputSignal(comp, id) { return toSignal((comp.inputs || {})[id]); }
   function getInput(comp, id) { return bool(getInputSignal(comp, id)); }
   function hasInput(comp, id) { return Object.prototype.hasOwnProperty.call(comp.inputs || {}, id) && getInputSignal(comp, id) !== SIG.Z; }
@@ -817,12 +824,18 @@
     state.components.forEach(c => {
       c.prevInputs = { ...(c.inputs || {}) };
       c.inputs = {};
-      c.inputDrivers = {};
+      c.inputDrivers = {};delete c.netSignals;delete c.terminals;
     });
   }
 
-  function propagateWires() {
+  function propagateWires(report=false) {
     resetInputBus();
+    if(CircuitNetworks.enabled(state.components)){
+      const result=CircuitNetworks.apply(state.components,state.wires,getPins);
+      if(report&&!result.stable){state.simStats.stable=false;addIssue('loop','Транзисторная сеть не стабилизировалась','Проверьте обратные связи и затворы.');}
+      if(report)for(const conflict of result.conflicts){state.simStats.conflicts++;const [cid,pid]=conflict.key.split(':');addIssue('conflict',`Конфликт в узле ${cid}.${pid}`,'Одновременно подключены 0 и 1; уровень узла X.',{kind:'pin',cid,pid},'Разомкните лишний проводящий канал или отключите конфликтующий источник.');}
+      return;
+    }
     for (const w of state.wires) {
       const from = getComp(w.from.cid);
       const to = getComp(w.to.cid);
@@ -968,7 +981,7 @@
     stable=settle()&&stable;
     state.simStats.stable=stable;
     if(!stable)addIssue('loop','Схема не стабилизировалась','Возможна комбинаторная петля.',null,'Разорвите обратную связь элементом памяти.');
-    propagateWires();
+    propagateWires(true);
     auditDisconnectedInputs();
     auditUnknownOutputs();
     if (state.showIssueMarkers) auditStructuralIssues();
@@ -1182,7 +1195,7 @@
       const pts = wirePoints(w);
       if (pts.length < 2) continue;
       const from = getComp(w.from.cid);
-      const sig = from ? toSignal(from.outputs[w.from.pid]) : SIG.Z;
+      const sig = pinSignal(from,w.from.pid);
       const active = sig === SIG.ONE;
       const unknown = sig === SIG.X;
       ctx.save();
@@ -1227,6 +1240,7 @@
   function drawComponent(c) {
     const def=getDef(c);if(!def)return;
     const selected=isComponentSelected(c.id), pins=getPins(c);
+    if(c.type==='junction'){ctx.save();const pp=pinPos(c,pins[0]);ctx.fillStyle=selected?cssVar('--accent','#087f73'):cssVar('--component-text','#364d59');ctx.beginPath();ctx.arc(pp.x,pp.y,selected?8:5,0,Math.PI*2);ctx.fill();ctx.font='10px Arial';ctx.textAlign='center';ctx.fillText(c.state.label||c.id,pp.x,pp.y+23);ctx.restore();return;}
     if(c.type==='contact'){ctx.save();ctx.strokeStyle=selected?cssVar('--accent','#087f73'):cssVar('--component-text','#364d59');ctx.fillStyle=cssVar('--board-bg','#f6f8f9');ctx.lineWidth=2;ctx.beginPath();ctx.arc(c.x+10,c.y+10,7,0,Math.PI*2);ctx.fill();ctx.stroke();pins.forEach(p=>drawPin(c,p));ctx.restore();return;}
     const extraBottom=pins.some(p=>p.side==='bottom')?18:0;
     ctx.save();ctx.fillStyle=cssVar('--component-fill','#fff');
@@ -1378,8 +1392,7 @@
 
   function drawPin(c, p) {
     const pp = pinPos(c, p);
-    const isOut = p.dir === 'out';
-    const sig = isOut ? toSignal(c.outputs[p.id]) : toSignal(c.inputs[p.id]);
+    const sig = pinSignal(c,p.id);
     const v = sig === SIG.ONE;
     const selected = state.wireStart?.comp.id === c.id && state.wireStart?.pin.id === p.id;
     ctx.save();
@@ -1849,20 +1862,22 @@
       const c = getComp(state.selected.id); if (!c) return;
       const def = getDef(c);
       const ins = Object.entries(c.inputs).map(([k,v]) => `${k}=${signalText(v)}`).join(', ') || 'нет';
+      const ios=Object.entries(c.terminals||{}).map(([k,v])=>`${k.toUpperCase()}=${signalText(v)}`).join(', ');
       const outs = Object.entries(c.outputs).map(([k,v]) => `${k}=${signalText(v)}`).join(', ') || 'нет';
       const props = normalizeComponentProps(c).props;
-      const pinInfo = `${(def.inputs || []).length} IN · ${(def.outputs || []).length} OUT`;
+      const pinInfo = `${(def.inputs || []).length} IN · ${(def.outputs || []).length} OUT${def.inouts?.length?' · '+def.inouts.length+' IO':''}`;
+      const portHelp=def.inouts?.length?'IO — двунаправленные контакты. G управляет каналом; S/D и junction.p соединяют общие узлы. 0 и 1 — уровни, Z — отключение, X — неопределённость.':pinInfo+'. A0/S0 — младший разряд. Допустимы только целые положительные значения. При уменьшении числа портов несовместимые провода удаляются; действие можно отменить.';
       const gate=CircuitExtended.ports.isGate(c.type),channels=['decoder','encoder','multiplexer','demultiplexer'].includes(c.type);
       const bitLabel=['const0','const1','switch','clock','input'].includes(c.type)?'Выходных разрядов':['indicator','probe','display','seven_segment'].includes(c.type)?'Входных разрядов':'Разрядность данных';
-      const bitControl = ['decoder','encoder','contact'].includes(c.type)||def.custom ? '' : `<label class="prop-row"><span>${bitLabel}</span><input id="propBitWidth" type="number" min="${LIMITS.minBitWidth}" max="${LIMITS.maxBitWidth}" value="${props.bitWidth}"></label>`;
+      const bitControl = ['decoder','encoder','contact','nmos','pmos','junction'].includes(c.type)||def.custom ? '' : `<label class="prop-row"><span>${bitLabel}</span><input id="propBitWidth" type="number" min="${LIMITS.minBitWidth}" max="${LIMITS.maxBitWidth}" value="${props.bitWidth}"></label>`;
       const countControls=gate?`<div class="port-count-grid"><label>${props.bitWidth>1?'Входных шин':'Входов'}<input id="propInputCount" type="number" min="2" max="16" value="${props.inputCount}"></label><label>${props.bitWidth>1?'Выходных шин':'Выходов'}<input id="propOutputCount" type="number" min="1" max="8" value="${props.outputCount}"></label></div><p class="port-hint">Все входы участвуют в операции. Выходы — копии одного результата.</p>`:'';
       const channelLabel=['multiplexer','encoder'].includes(c.type)?'Входных каналов':'Выходных каналов';
       const channelControl=channels?`<label class="prop-row"><span>${channelLabel}</span><select id="propChannelCount">${[2,4,8,16,32].map(n=>`<option value="${n}" ${n===2**props.addressBits?'selected':''}>${n}</option>`).join('')}</select></label>`:'';
       const addressControl = ['ram','rom'].includes(c.type)?`<label class="prop-row"><span>Адресных разрядов</span><input id="propAddressBits" type="number" min="1" max="5" value="${props.addressBits}"></label>`:'';
-      const portHeading=`<div class="port-heading"><b>Порты</b><span>${(def.inputs||[]).length} вход. · ${(def.outputs||[]).length} вых.</span></div>`;
+      const portHeading=`<div class="port-heading"><b>Порты</b><span>${(def.inputs||[]).length} вход. · ${(def.outputs||[]).length} вых.${def.inouts?.length?' · '+def.inouts.length+' двунапр.':''}</span></div>`;
       const orientationControl=`<label class="prop-row"><span>Направление</span><select id="propOrientation">${[['east','Вправо →'],['south','Вниз ↓'],['west','Влево ←'],['north','Вверх ↑']].map(([v,label])=>`<option value="${v}" ${(c.props.orientation||'east')===v?'selected':''}>${label}</option>`).join('')}</select></label>`;
       const extraControls = (c.type==='input'?`<label class="prop-row"><span>Значение (0–${2**bitWidth(c)-1})</span><input id="propValue" type="number" min="0" max="${2**bitWidth(c)-1}" value="${c.state.value||0}"></label>`:'')+(['ram','rom'].includes(c.type)?`<label class="memory-label">Содержимое памяти (DEC или 0xHEX)<textarea id="propMemory" spellcheck="false">${(c.state.memory||[]).map(v=>v===null?'X':v).join(' ')}</textarea></label><button id="applyMemoryBtn" class="full-width">Записать содержимое</button>`:'')+(c.type==='shifter'?`<label class="prop-row"><span>Направление</span><select id="propDirection"><option value="left" ${c.state.direction!=='right'?'selected':''}>Влево</option><option value="right" ${c.state.direction==='right'?'selected':''}>Вправо</option></select></label>`:'');
-      selectionInfo.innerHTML = `<p><span class="badge">${def.group}</span></p><p><b>${escapeHTML(def.name)}</b></p><div class="desc-card">${escapeHTML(def.desc || 'Описание модуля пока не задано.')}</div><div class="prop-box">${portHeading}${countControls}${channelControl}${bitControl}${addressControl}${orientationControl}${extraControls}${def.source?'<button id="openSubcircuitBtn" class="full-width">Открыть подсхему →</button>':''}<p id="propValidationWarning" class="prop-warning" hidden></p><p class="muted">${pinInfo}. A0/S0 — младший разряд. Допустимы только целые положительные значения. При уменьшении числа портов несовместимые провода удаляются; действие можно отменить.</p></div><p class="muted">ID: ${escapeHTML(c.id)}</p><p>Входы: ${escapeHTML(ins)}</p><p>Выходы: ${escapeHTML(outs)}</p>`;
+      selectionInfo.innerHTML = `<p><span class="badge">${def.group}</span></p><p><b>${escapeHTML(def.name)}</b></p><div class="desc-card">${escapeHTML(def.desc || 'Описание модуля пока не задано.')}</div><div class="prop-box">${portHeading}${countControls}${channelControl}${bitControl}${addressControl}${orientationControl}${extraControls}${def.source?'<button id="openSubcircuitBtn" class="full-width">Открыть подсхему →</button>':''}<p id="propValidationWarning" class="prop-warning" hidden></p><p class="muted">${escapeHTML(portHelp)}</p></div><p class="muted">ID: ${escapeHTML(c.id)}</p><p>Входы: ${escapeHTML(ins)}</p><p>Выходы: ${escapeHTML(outs)}</p>${ios?'<p>Двунаправленные: '+escapeHTML(ios)+'</p>':''}`;
       bindComponentPropertyControls(c);
       bindExtendedControls(c);
       document.getElementById('openSubcircuitBtn')?.addEventListener('click',()=>openSubcircuit(c));
@@ -1963,7 +1978,7 @@
     if (state.tool === 'wire') {
       const hitPin = hitTestPin(pos);
       if (hitPin) {
-        if (!state.wireStart) { state.wireBends=[];state.wireStart = hitPin; setStatus(`Выбран вывод ${hitPin.pin.label}. Теперь нажми на ${hitPin.pin.dir === 'out' ? 'вход' : 'выход'} другого модуля.`); }
+        if (!state.wireStart) { state.wireBends=[];state.wireStart = hitPin; setStatus(`Выбран вывод ${hitPin.pin.label}. Теперь нажми на ${hitPin.pin.dir==='io'?'другой контакт сети':hitPin.pin.dir==='out'?'вход или S/D':'выход или S/D'}.`); }
         else if(state.wireStart.comp.id===hitPin.comp.id&&state.wireStart.pin.id===hitPin.pin.id)cancelInteraction();else connect(state.wireStart, hitPin);
         draw(); return;
       }
@@ -2699,6 +2714,10 @@
         const drivenByInside = state.wires.some(w => selectedIds.has(w.from.cid) && w.to.cid === c.id && w.to.pid === p.id);
         if (!drivenByInside) inputMap.set(`${c.id}:${p.id}`, { cid: c.id, pid: p.id, label: p.label || p.id, y: c.y + def.h * p.y });
       }
+      for(const p of def.inouts||[]){
+        if(state.wires.some(w=>w.to.cid===c.id&&w.to.pid===p.id&&!selectedIds.has(w.from.cid)))inputMap.set(`${c.id}:${p.id}`,{cid:c.id,pid:p.id,label:p.label||c.state.label||c.id,y:c.y});
+        if(state.wires.some(w=>w.from.cid===c.id&&w.from.pid===p.id&&!selectedIds.has(w.to.cid)))outputMap.set(`${c.id}:${p.id}`,{cid:c.id,pid:p.id,label:p.label||c.state.label||c.id,y:c.y});
+      }
       for (const p of def.outputs || []) {
         const drivesInside = state.wires.some(w => w.from.cid === c.id && w.from.pid === p.id && selectedIds.has(w.to.cid));
         const drivesOutside = state.wires.some(w => w.from.cid === c.id && w.from.pid === p.id && !selectedIds.has(w.to.cid));
@@ -2742,6 +2761,7 @@
     }
     for (let pass = 0; pass < 24; pass++) {
       const before = comps.map(c => `${c.id}:${JSON.stringify(c.outputs)}`).join('|');
+      if(CircuitNetworks.enabled(comps)){CircuitNetworks.apply(comps,source.wires,getPins,[...inputByPin].map(([id,p])=>({...p,value:external[id]})));comps.forEach(evalPureComponent);const after=comps.map(c=>`${c.id}:${JSON.stringify(c.outputs)}`).join('|');if(before===after)break;continue;}
       comps.forEach(c => { c.inputs = {}; });
       for (const [extPin, target] of inputByPin.entries()) {
         const c = map.get(target.cid);
@@ -2761,7 +2781,7 @@
     const result = {};
     for (const [outPin, sourcePin] of outputByPin.entries()) {
       const c = map.get(sourcePin.cid);
-      result[outPin] = c ? toSignal((c.outputs || {})[sourcePin.pid]) : SIG.X;
+      result[outPin] = c ? pinSignal(c,sourcePin.pid) : SIG.X;
     }
     return result;
   }
@@ -2792,6 +2812,7 @@
         }
         const{comps,map}=cached;
         const propagate=()=>{
+          if(CircuitNetworks.enabled(comps)){CircuitNetworks.apply(comps,def.source.wires,getPins,def.inputs.map((p,i)=>({...def.source.inputs[i],value:getInputSignal(c,p.id)})));return;}
           comps.forEach(child=>child.inputs={});
           def.inputs.forEach((p,i)=>{const target=def.source.inputs[i],child=map.get(target.cid);child.inputs[target.pid]=getInputSignal(c,p.id);});
           for(const w of def.source.wires){const from=map.get(w.from.cid),to=map.get(w.to.cid);to.inputs[w.to.pid]=mergeSignalsPure(to.inputs[w.to.pid],from.outputs[w.from.pid]);}
@@ -2799,7 +2820,7 @@
         const settle=()=>{for(let pass=0;pass<Math.max(32,comps.length+2);pass++){const before=JSON.stringify(comps.map(x=>x.outputs));propagate();comps.forEach(x=>computeComponent(x,true));if(before===JSON.stringify(comps.map(x=>x.outputs)))break;}};
         settle();propagate();
         if(!holdMemory){comps.filter(child=>['dff','jk_ff'].includes(child.type)||CircuitExtended.sequential.has(child.type)||defs[child.type]?.source).forEach(child=>computeComponent(child,false));settle();}
-        def.outputs.forEach((p,i)=>{const source=def.source.outputs[i];setOut(c,p.id,map.get(source.cid).outputs[source.pid]);});
+        def.outputs.forEach((p,i)=>{const source=def.source.outputs[i];setOut(c,p.id,pinSignal(map.get(source.cid),source.pid));});
         c.state.childStates=comps.map(child=>({id:child.id,state:structuredClone(child.state)}));
       }finally{subcircuitDepth--;}
       return;
